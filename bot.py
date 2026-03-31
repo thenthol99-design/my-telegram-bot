@@ -14,7 +14,7 @@ def send_welcome(message):
     # ១. បង្កើតប៊ូតុងធំនៅខាងក្រោម (Reply Keyboard) ដើម្បីបើកហ្គេម
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
     web_app = types.WebAppInfo(GAME_URL)
-    btn_play = types.KeyboardButton("🎮 ចូលលេងហ្គេម (Mini App)", web_app=web_app)
+    btn_play = types.KeyboardButton("🎮 ចូលលេងហ្គេម", web_app=web_app)
     markup.add(btn_play)
 
     # ២. បង្កើតប៊ូតុងជាប់សារ (Inline Keyboard) សម្រាប់ Admin និងការដាក់លុយ
