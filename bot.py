@@ -47,7 +47,7 @@ def start(message):
     # --- ២. បង្កើតប៊ូតុងជាប់សារ (Inline Keyboard) សម្រាប់ជម្រើសផ្សេងៗ ---
     markup_inline = types.InlineKeyboardMarkup(row_width=1)
     # !!! កុំភ្លេចដូរ your_admin_username ទៅជា Username តេឡេក្រាមរបស់អ្នក
-    btn_admin = types.InlineKeyboardButton("📩 ឆាតទៅ Admin", url="https://t.me/your_admin_username") 
+    btn_admin = types.InlineKeyboardButton("📩 ឆាតទៅ Admin", url="https://t.me/Cockstn03TT") 
     btn1 = types.InlineKeyboardButton("💰 ចង់ដាក់ប្រាក់លេង (Target)", callback_data="target")
     btn2 = types.InlineKeyboardButton("🎁 សាកល្បងគណនី Free", callback_data="trial")
     markup_inline.add(btn_admin, btn1, btn2)
@@ -60,7 +60,7 @@ def start(message):
     
     # ផ្ញើសារចេញទៅ (ភ្ជាប់ជាមួយប៊ូតុងទាំង ២ ប្រភេទ)
     bot.send_message(message.chat.id, welcome_text, reply_markup=markup_reply)
-    bot.send_message(message.chat.id, "សេវាកម្មបន្ថែម៖", reply_markup=markup_inline)
+    bot.send_message(message.chat.id, "សូមជ្រើសរើសសេវាកម្មខាងក្រោម៖", reply_markup=markup_inline)
 
 @bot.callback_query_handler(func=lambda call: True)
 def handle_choice(call):
