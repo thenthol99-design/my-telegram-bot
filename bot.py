@@ -48,8 +48,8 @@ def start(message):
     markup_inline = types.InlineKeyboardMarkup(row_width=1)
     # !!! កុំភ្លេចដូរ your_admin_username ទៅជា Username តេឡេក្រាមរបស់អ្នក
     btn_admin = types.InlineKeyboardButton("📩 ឆាតទៅ Admin", url="https://t.me/Cockstn03TT") 
-    btn1 = types.InlineKeyboardButton("💰 ចង់ដាក់ប្រាក់លេង (Target)", callback_data="target")
-    btn2 = types.InlineKeyboardButton("🎁 សាកល្បងគណនី Free", callback_data="trial")
+    btn1 = types.InlineKeyboardButton("💰 ដាក់លុយ (QR Code)", callback_data="target")
+    btn2 = types.InlineKeyboardButton("🎁 គណនីសាកល្បង", callback_data="trial")
     markup_inline.add(btn_admin, btn1, btn2)
 
     welcome_text = (
@@ -102,6 +102,18 @@ def handle_choice(call):
         )
     except Exception as e:
         print(f"Error in callback: {e}")
+        
+# កូដសម្រាប់ឆ្លើយតបពេលចុចប៊ូតុង Deposit ឬ Trial
+@bot.callback_query_handler(func=lambda call: True)
+def callback_query(call):
+    if call.data == "deposit":
+        text = "🏦 សម្រាប់ការដាក់ប្រាក់តាម QR Code (ABA/Bakong):\n\nសូមផ្ញើសារទៅកាន់ Admin ដើម្បីទទួលរូបភាព QR ផ្លូវការ រួចផ្ញើវិក្កយបត្រមកវិញដើម្បីបញ្ចូលលុយ។"
+        bot.send_message(call.message.chat.id, text)
+    elif call.data == "trial":
+        text = "🎁 គណនីសាកល្បង (Demo Account):\n\nអ្នកអាចចូលទៅកាន់ហ្គេម រួចជ្រើសរើសយក 'Trial Mode' ឬប្រើ User: guest / Pass: 123456 (ឧទាហរណ៍)។\n\n*បញ្ជាក់៖ សម្រាប់ការបង្កើតគណនីពិត សូមទាក់ទង Admin។*"
+        bot.send_message(call.message.chat.id, text)
+    bot.answer_callback_query(call.id)
 
+bot.infinity_polling()
 print("Bot is running...")
 bot.infinity_polling()
