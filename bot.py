@@ -10,6 +10,17 @@ ADMIN_ID = 5663812084
 
 bot = telebot.TeleBot(API_TOKEN)
 
+# លីងវេបសាយហ្គេមរបស់អ្នក
+GAME_URL = "https://cfplay.online/login"
+
+@bot.message_handler(commands=['start'])
+def send_welcome(message):
+    # ១. បង្កើតប៊ូតុងធំនៅខាងក្រោម (Reply Keyboard) ដើម្បីបើកហ្គេម
+    markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    web_app = types.WebAppInfo(GAME_URL)
+    btn_play = types.KeyboardButton("🎮 ចូលលេងហ្គេម (Mini App)", web_app=web_app)
+    markup.add(btn_play)
+    
 # មុខងារ Database
 def init_db():
     conn = psycopg2.connect(DATABASE_URL)
@@ -32,6 +43,7 @@ def start(message):
     init_db()
     
     markup = types.InlineKeyboardMarkup(row_width=1)
+    btn_admin = types.InlineKeyboardButton("📩 ឆាតទៅ Admin", url="https://t.me/your_admin_username") # ដាក់ Username របស់អ្នក
     btn1 = types.InlineKeyboardButton("💰 ចង់ដាក់ប្រាក់លេង (Target)", callback_data="target")
     btn2 = types.InlineKeyboardButton("🎁 សាកល្បងគណនី Free", callback_data="trial")
     markup.add(btn1, btn2)
