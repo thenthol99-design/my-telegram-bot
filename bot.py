@@ -19,14 +19,14 @@ def send_welcome(message):
 
     # ២. បង្កើតប៊ូតុងជាប់សារ (Inline Keyboard) សម្រាប់ Admin និងការដាក់លុយ
     inline_markup = types.InlineKeyboardMarkup(row_width=2)
-    btn_admin = types.InlineKeyboardButton("📩 ឆាតទៅ Admin", url="https://t.me/your_admin_username") # ដាក់ Username របស់អ្នក
+    btn_admin = types.InlineKeyboardButton("📩 ឆាតទៅ Admin", url="https://t.me/Cockstn03TT") # ដាក់ Username របស់អ្នក
     btn_deposit = types.InlineKeyboardButton("💰 ដាក់លុយ (QR Code)", callback_data="deposit")
     btn_trial = types.InlineKeyboardButton("🎁 គណនីសាកល្បង", callback_data="trial")
     inline_markup.add(btn_admin, btn_deposit, btn_trial)
 
     welcome_text = (
         f"សួស្ដី {message.from_user.first_name}! 👋\n"
-        "សូមស្វាគមន៍មកកាន់ AGCF Play ផ្លូវការ។\n\n"
+        "សូមស្វាគមន៍មកកាន់ STN Play ផ្លូវការ។\n\n"
         "🕹 ហ្គេមអនឡាញដែលមានទំនុកចិត្តខ្ពស់!\n"
         "👉 ចុចប៊ូតុងខាងក្រោមដើម្បីចាប់ផ្ដើម៖"
     )
