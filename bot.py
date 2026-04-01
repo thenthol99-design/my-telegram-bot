@@ -55,6 +55,7 @@ def upload_telegram_file(message, file_type):
         file_info = bot.get_file(file_id)
         downloaded_file = bot.download_file(file_info.file_path)
         
+        # កំណត់ឱ្យប្រើកន្ទុយ .ogg ជានិច្ចសម្រាប់សំឡេង ដើម្បីឱ្យចេញជា Voice Note ស្អាត
         ext = 'jpg' if file_type == 'photo' else 'mp4' if file_type == 'video' else 'ogg'
         file_name = f"chat_media/{uuid.uuid4()}.{ext}"
         blob = bucket.blob(file_name)
@@ -67,7 +68,7 @@ def upload_telegram_file(message, file_type):
         print(f"Upload Error: {e}")
         return None, "none"
 
-# --- មុខងារផ្ញើសារបណ្ដាក់គ្នា (Anti-Spam) កែឱ្យស្គាល់ Voice ---
+# --- មុខងារផ្ញើសារបណ្ដាក់គ្នា (Anti-Spam) បង្ខំឱ្យផ្ញើជា Voice Note (.ogg) ---
 def process_staggered_broadcast(message_text, target_cat, media_url, media_type, delay_seconds):
     customers = db_firebase.collection("customers").stream()
     count = 0
@@ -81,7 +82,7 @@ def process_staggered_broadcast(message_text, target_cat, media_url, media_type,
                 elif media_type == 'video' and media_url: 
                     bot.send_video(chat_id, media_url, caption=message_text)
                 elif (media_type == 'voice' or media_type == 'audio') and media_url: 
-                    # ប្រើ send_voice ដើម្បីឱ្យចេញជាសារសំឡេងរាងមូល
+                    # ប្រើ send_voice ដើម្បីបង្ខំឱ្យចេញជា "សារសំឡេងរាងមូល" (.ogg)
                     bot.send_voice(chat_id, media_url, caption=message_text)
                 else: 
                     bot.send_message(chat_id, message_text)
@@ -91,7 +92,7 @@ def process_staggered_broadcast(message_text, target_cat, media_url, media_type,
             except: pass
     bot.send_message(ADMIN_ID, f"✅ ការផ្ញើបណ្ដាក់គ្នាទៅភ្ញៀវ {count} នាក់ ចប់សព្វគ្រប់!")
 
-# --- មុខងារ Listen សម្រាប់ Admin ឆ្លើយតបពី Dashboard ---
+# --- មុខងារ Listen សម្រាប់ Admin ឆ្លើយតបពី Dashboard (គាំទ្រ Voice Note) ---
 def listen_for_admin_replies():
     def on_snapshot(col_snapshot, changes, read_time):
         for change in changes:
@@ -105,7 +106,9 @@ def listen_for_admin_replies():
                 try:
                     if m_type == 'photo' and m_url: bot.send_photo(chat_id, m_url, caption=text)
                     elif m_type == 'video' and m_url: bot.send_video(chat_id, m_url, caption=text)
-                    elif m_type == 'voice' and m_url: bot.send_voice(chat_id, m_url, caption=text) # បន្ថែមឱ្យស្គាល់ការផ្ញើ Voice ពី Dashboard
+                    elif (m_type == 'voice' or m_type == 'audio') and m_url: 
+                        # បង្ខំឱ្យចេញជា Voice Note នៅពេលឆ្លើយតបចេញពី Dashboard
+                        bot.send_voice(chat_id, m_url, caption=text)
                     elif text: bot.send_message(chat_id, text)
                 except: pass
                 db_firebase.collection("admin_replies").document(change.document.id).delete()
