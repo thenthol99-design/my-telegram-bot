@@ -106,7 +106,7 @@ def start(message):
     inline_markup = types.InlineKeyboardMarkup(row_width=2)
     
     # ⚠️ កុំភ្លេចដូរ YOUR_ADMIN_USERNAME ទៅជា Username របស់ Admin ផ្ទាល់ ឧ. STN_Admin
-    btn_admin = types.InlineKeyboardButton("✉️ ឆាតទៅ Admin ↗️", url="https://t.me/YOUR_ADMIN_USERNAME")
+    btn_admin = types.InlineKeyboardButton("✉️ ឆាតទៅ Admin ↗️", url="https://t.me/Cockstn03TT")
     btn_deposit = types.InlineKeyboardButton("💰 ដាក់លុយ (QR Code)", callback_data="deposit")
     btn_trial = types.InlineKeyboardButton("🎁 គណនីសាកល្បង", callback_data="trial")
     
