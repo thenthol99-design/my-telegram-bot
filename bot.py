@@ -21,10 +21,12 @@ bot = telebot.TeleBot(API_TOKEN)
 if FIREBASE_CONFIG:
     config_data = json.loads(FIREBASE_CONFIG)
     cred = credentials.Certificate(config_data)
-    # បន្ថែម storageBucket សម្រាប់ការ Upload រូបភាព
+    
+    # កូដថ្មីសម្រាប់ភ្ជាប់ Storage Bucket (ដើម្បីឱ្យមើលឃើញរូបភាព/វីដេអូ)
     firebase_admin.initialize_app(cred, {
-        'storageBucket': config_data.get('storageBucket')
+        'storageBucket': 'my-telegram-bot-46df4.firebasestorage.app'
     })
+    
     db_firebase = firestore.client()
     bucket = firebase_storage.bucket()
 
