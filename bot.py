@@ -67,7 +67,7 @@ def upload_telegram_file(message, file_type):
         print(f"Upload Error: {e}")
         return None, "none"
 
-# --- មុខងារផ្ញើសារបណ្ដាក់គ្នា (Anti-Spam) ---
+# --- មុខងារផ្ញើសារបណ្ដាក់គ្នា (Anti-Spam) កែឱ្យស្គាល់ Voice ---
 def process_staggered_broadcast(message_text, target_cat, media_url, media_type, delay_seconds):
     customers = db_firebase.collection("customers").stream()
     count = 0
@@ -76,9 +76,16 @@ def process_staggered_broadcast(message_text, target_cat, media_url, media_type,
         chat_id = customer.id
         if target_cat == 'All' or c_data.get('category') == target_cat:
             try:
-                if media_type == 'photo' and media_url: bot.send_photo(chat_id, media_url, caption=message_text)
-                elif media_type == 'video' and media_url: bot.send_video(chat_id, media_url, caption=message_text)
-                else: bot.send_message(chat_id, message_text)
+                if media_type == 'photo' and media_url: 
+                    bot.send_photo(chat_id, media_url, caption=message_text)
+                elif media_type == 'video' and media_url: 
+                    bot.send_video(chat_id, media_url, caption=message_text)
+                elif (media_type == 'voice' or media_type == 'audio') and media_url: 
+                    # ប្រើ send_voice ដើម្បីឱ្យចេញជាសារសំឡេងរាងមូល
+                    bot.send_voice(chat_id, media_url, caption=message_text)
+                else: 
+                    bot.send_message(chat_id, message_text)
+                
                 count += 1
                 if delay_seconds > 0: time.sleep(delay_seconds)
             except: pass
