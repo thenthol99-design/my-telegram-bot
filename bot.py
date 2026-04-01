@@ -98,6 +98,7 @@ def listen_for_admin_replies():
                 try:
                     if m_type == 'photo' and m_url: bot.send_photo(chat_id, m_url, caption=text)
                     elif m_type == 'video' and m_url: bot.send_video(chat_id, m_url, caption=text)
+                    elif m_type == 'voice' and m_url: bot.send_voice(chat_id, m_url, caption=text) # បន្ថែមឱ្យស្គាល់ការផ្ញើ Voice ពី Dashboard
                     elif text: bot.send_message(chat_id, text)
                 except: pass
                 db_firebase.collection("admin_replies").document(change.document.id).delete()
