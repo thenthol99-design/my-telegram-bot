@@ -5,15 +5,16 @@ import psycopg2
 import firebase_admin
 from firebase_admin import credentials, firestore
 import json
+import threading
+from apscheduler.schedulers.background import BackgroundScheduler
 
 # --- កំណត់ការកំណត់ (Configuration) ---
 API_TOKEN = os.getenv('API_TOKEN')
 DATABASE_URL = os.getenv('DATABASE_URL')
-ADMIN_ID = 5663812084 
 FIREBASE_CONFIG = os.getenv('FIREBASE_CONFIG')
+ADMIN_ID = 5663812084  # លេខ ID របស់អ្នក
 
 bot = telebot.TeleBot(API_TOKEN)
-GAME_URL = "https://cfplay.online/login"
 
 # --- តភ្ជាប់ Google Firebase ---
 if FIREBASE_CONFIG:
@@ -22,65 +23,80 @@ if FIREBASE_CONFIG:
     firebase_admin.initialize_app(cred)
     db_firebase = firestore.client()
 
-# --- មុខងារ Database PostgreSQL (សម្រាប់ Bot ប្រើ) ---
-def init_db():
-    conn = psycopg2.connect(DATABASE_URL)
-    cur = conn.cursor()
-    cur.execute("""
-        CREATE TABLE IF NOT EXISTS users (
-            chat_id BIGINT PRIMARY KEY,
-            username TEXT,
-            full_name TEXT,
-            category TEXT DEFAULT 'Unknown',
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        );
-    """)
-    conn.commit()
-    cur.close()
-    conn.close()
+# --- មុខងារ ១៖ ផ្ញើសារទៅភ្ញៀវពី Dashboard (Broadcast Listener) ---
+def listen_for_broadcasts():
+    def on_snapshot(col_snapshot, changes, read_time):
+        for change in changes:
+            if change.type.name == 'ADDED':
+                data = change.document.to_dict()
+                message_text = data.get('message')
+                target_cat = data.get('target_category')
 
+                # ទាញយកអតិថិជនពី Firebase
+                customers = db_firebase.collection("customers").stream()
+                count = 0
+                for customer in customers:
+                    c_data = customer.to_dict()
+                    chat_id = customer.id
+                    
+                    # ឆែកលក្ខខណ្ឌគោលដៅ (All, Target, ឬ Non-Target)
+                    if target_cat == 'All' or c_data.get('category') == target_cat:
+                        try:
+                            bot.send_message(chat_id, message_text)
+                            count += 1
+                        except:
+                            pass
+                
+                # ប្រាប់ Admin ថាផ្ញើរួចហើយ
+                bot.send_message(ADMIN_ID, f"✅ បានផ្ញើសារទៅកាន់ភ្ញៀវចំនួន {count} នាក់រួចរាល់!")
+                # លុបបញ្ជាចោលកុំឱ្យវាផ្ញើជាន់គ្នា
+                db_firebase.collection("broadcasts").document(change.document.id).delete()
+
+    db_firebase.collection("broadcasts").on_snapshot(on_snapshot)
+
+# --- មុខងារ ២៖ ផ្ញើសារស្វ័យប្រវត្តិរាល់ថ្ងៃ (Daily Automation) ---
+def daily_broadcast():
+    customers = db_firebase.collection("customers").stream()
+    for customer in customers:
+        try:
+            bot.send_message(customer.id, "🔔 សួស្ដី! កុំភ្លេចចូលលេងហ្គេមថ្ងៃនេះណា មានប្រម៉ូសិនពិសេស! 🎁")
+        except:
+            pass
+
+scheduler = BackgroundScheduler()
+# កំណត់ផ្ញើរាល់ថ្ងៃ ម៉ោង ៨:០០ ព្រឹក (អ្នកអាចដូរម៉ោងបាននៅទីនេះ)
+scheduler.add_job(daily_broadcast, 'cron', hour=8, minute=0)
+scheduler.start()
+
+# --- មុខងារ Bot ធម្មតា ---
 @bot.message_handler(commands=['start'])
 def start(message):
-    init_db()
-    markup_reply = types.ReplyKeyboardMarkup(resize_keyboard=True)
-    markup_reply.add(types.KeyboardButton("🎮 ចូលលេងហ្គេម (Mini App)", web_app=types.WebAppInfo(GAME_URL)))
-
     markup_inline = types.InlineKeyboardMarkup(row_width=1)
     markup_inline.add(
-        types.InlineKeyboardButton("📩 ឆាតទៅ Admin", url="https://t.me/Cockstn03TT"),
         types.InlineKeyboardButton("💰 ដាក់លុយ (QR Code)", callback_data="deposit"),
         types.InlineKeyboardButton("🎁 គណនីសាកល្បង", callback_data="trial")
     )
-    bot.send_message(message.chat.id, f"សួស្ដី {message.from_user.first_name}! សូមជ្រើសរើសសេវាកម្ម៖", reply_markup=markup_reply)
-    bot.send_message(message.chat.id, "ជម្រើសបន្ថែម៖", reply_markup=markup_inline)
+    bot.send_message(message.chat.id, f"សួស្ដី {message.from_user.first_name}! តើអ្នកចង់ធ្វើអ្វីថ្ងៃនេះ?", reply_markup=markup_inline)
 
 @bot.callback_query_handler(func=lambda call: True)
 def handle_query(call):
     user_id = call.from_user.id
-    name = call.from_user.first_name
     category = "Target (Deposit)" if call.data == "deposit" else "Non-Target (Trial)"
     
-    # ១. រក្សាទុកក្នុង PostgreSQL
-    conn = psycopg2.connect(DATABASE_URL)
-    cur = conn.cursor()
-    cur.execute("INSERT INTO users (chat_id, username, full_name, category) VALUES (%s, %s, %s, %s) ON CONFLICT (chat_id) DO UPDATE SET category = EXCLUDED.category;", (user_id, call.from_user.username, name, category))
-    conn.commit()
-    cur.close()
-    conn.close()
-
-    # ២. ផ្ញើទៅ Google Firebase (សម្រាប់បង្ហាញលើ Dashboard វេបសាយ)
+    # រក្សាទុកក្នុង Firebase
     user_data = {
-        "name": name,
+        "name": call.from_user.first_name,
         "username": call.from_user.username,
         "category": category,
         "time": firestore.SERVER_TIMESTAMP
     }
     db_firebase.collection("customers").document(str(user_id)).set(user_data)
-
-    # ផ្ញើដំណឹងទៅ Admin
-    bot.send_message(ADMIN_ID, f"🔔 **អតិថិជនថ្មី!**\nឈ្មោះ: {name}\nប្រភេទ: {category}\n🔗 [ចុចឆាត](tg://user?id={user_id})", parse_mode="Markdown")
     
-    bot.answer_callback_query(call.id, "ទិន្នន័យបានរក្សាទុកក្នុង Dashboard!")
-    bot.send_message(call.message.chat.id, f"អរគុណ {name}! អ្នកបានជ្រើសរើស: {category}")
+    bot.answer_callback_query(call.id, "ជោគជ័យ!")
+    bot.send_message(call.message.chat.id, f"អ្នកបានជ្រើសរើស: {category}")
 
+# បើកដំណើរការ Listener ក្នុង Thread ផ្សេងដើម្បីកុំឱ្យទាក់ Bot
+threading.Thread(target=listen_for_broadcasts, daemon=True).start()
+
+print("Bot is running...")
 bot.infinity_polling()
