@@ -126,23 +126,22 @@ def handle_query(call):
     first_name = call.from_user.first_name
     category = ""
     
-    bot.answer_callback_query(call.id) # បិទសញ្ញាវិលៗពេលចុចប៊ូតុង
-    
-    # បើភ្ញៀវចុច "ដាក់លុយ"
+    bot.answer_callback_query(call.id) # បិទសញ្ញាវិលៗលើប៊ូតុង
+
+    # ១. ឆែកមើលថាភ្ញៀវចុចប៊ូតុងមួយណា
     if call.data == "deposit":
         category = "Target (Deposit)"
         reply_msg = f"🏦 សម្រាប់ការដាក់ប្រាក់តាម QR Code (ABA/Bakong):\n\nសូមផ្ញើសារទៅកាន់ Admin ដើម្បីទទួលរូបភាព QR ផ្លូវការ រួចផ្ញើវិក្កយបត្រមកវិញដើម្បីបញ្ចូលលុយ។\n\nអរគុណ {first_name}! អ្នកបានជ្រើសរើស: ដាក់លុយ\nក្រុមការងារនឹងទាក់ទងទៅលោកអ្នកក្នុងពេលឆាប់ៗ។"
         bot.send_message(call.message.chat.id, reply_msg)
         
-    # បើភ្ញៀវចុច "គណនីសាកល្បង"
     elif call.data == "trial":
         category = "Non-Target (Trial)"
-        # ចាប់យកគណនី ១ ក្នុងចំណោម ១០ មកផ្ញើឱ្យភ្ញៀវ
+        # ចាប់យកគណនីសាកល្បង ១ ក្នុងចំណោម ១០ (ត្រូវប្រាកដថាអ្នកមានបញ្ជី TRIAL_ACCOUNTS នៅខាងលើ)
         random_account = random.choice(TRIAL_ACCOUNTS)
         reply_msg = f"🎁 នេះគឺជាគណនីសាកល្បងរបស់អ្នក៖\n\n{random_account}\n\nសូមរីករាយក្នុងការកម្សាន្តលេងហ្គេម!"
         bot.send_message(call.message.chat.id, reply_msg)
 
-    # រក្សាទុកទិន្នន័យចូល Firebase ដូចធម្មតា
+    # ២. រក្សាទុកទិន្នន័យទៅ Firebase
     user_data = {
         "name": first_name,
         "username": call.from_user.username,
@@ -150,6 +149,21 @@ def handle_query(call):
         "time": firestore.SERVER_TIMESTAMP
     }
     db_firebase.collection("customers").document(str(user_id)).set(user_data)
+
+    # ៣. 🔔 ផ្ញើសារប្រាប់ Admin (ត្រង់ចំណុចនេះហើយដែលអ្នកចង់បាន)
+    # ប្រើ tg://user?id= ដើម្បីឱ្យ Admin អាចចុចឆាតទៅភ្ញៀវបាន ទោះភ្ញៀវអត់ Username ក៏ដោយ
+    admin_msg = (
+        f"🔔 *អតិថិជនថ្មី!*\n\n"
+        f"👤 ឈ្មោះ: {first_name}\n"
+        f"📂 ប្រភេទ: {category}\n"
+        f"🆔 ID: `{user_id}`\n\n"
+        f"🔗 [🔗 ចុចទីនេះដើម្បីឆាតទៅភ្ញៀវ](tg://user?id={user_id})"
+    )
+    
+    try:
+        bot.send_message(ADMIN_ID, admin_msg, parse_mode="Markdown")
+    except Exception as e:
+        print(f"Error sending to admin: {e}")
 
 # មុខងារពេលចុចប៊ូតុង "ចូលលេង" ខាងក្រោម
 @bot.message_handler(func=lambda message: message.text == "🔲 ចូលលេង")
