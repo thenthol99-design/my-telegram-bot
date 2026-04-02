@@ -19,7 +19,7 @@
         .chat-bubble-admin { background: #2563eb; color: white; align-self: flex-end; border-bottom-right-radius: 2px; }
         .chat-bubble-user { background: white; color: #1e293b; align-self: flex-start; border-bottom-left-radius: 2px; border: 1px solid #e2e8f0; }
         img, video { max-width: 250px; border-radius: 12px; margin-bottom: 5px; cursor: pointer; }
-        audio { height: 35px; width: 200px; }
+        audio { height: 35px; width: 250px; max-width: 100%; }
         .recording { animation: pulse 1.5s infinite; color: #ef4444; background: #fee2e2 !important; }
         @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
     </style>
@@ -60,9 +60,9 @@
 
             <!-- Right Column: Chat Inbox -->
             <div class="lg:col-span-2">
-                <div class="bg-white rounded-3xl shadow-sm border border-gray-100 flex overflow-hidden h-[720px]">
+                <div class="bg-white rounded-3xl shadow-sm border border-gray-100 flex flex-col lg:flex-row overflow-hidden h-[800px] lg:h-[720px]">
                     <!-- Chat Sidebar -->
-                    <div class="w-1/3 border-r bg-slate-50/50 flex flex-col">
+                    <div class="w-full lg:w-1/3 h-[250px] lg:h-full border-b lg:border-r bg-slate-50/50 flex flex-col">
                         <div class="p-4 font-bold border-b bg-white flex items-center gap-2"><i class="fas fa-inbox text-blue-500"></i> Inbox</div>
                         <div id="chat-sidebar" class="flex-1 overflow-y-auto"></div>
                     </div>
@@ -97,7 +97,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-        import { getFirestore, collection, onSnapshot, addDoc, serverTimestamp, query, where, orderBy, doc, deleteDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+        import { getFirestore, collection, onSnapshot, addDoc, serverTimestamp, query, where, orderBy, doc, deleteDoc, getDoc, limit } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
         import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-storage.js";
 
         const firebaseConfig = {
@@ -174,10 +174,10 @@
                         <div class="text-[10px] text-green-500 font-normal">Active Now</div>
                     </div>
                 </div>`;
-            
+             
             if (unsubscribeChat) unsubscribeChat();
 
-            const q = query(collection(db, "chats"), where("chat_id", "==", id), orderBy("timestamp", "asc"));
+            const q = query(collection(db, "chats"), where("chat_id", "==", id), orderBy("timestamp", "asc"), limit(50));
             unsubscribeChat = onSnapshot(q, (snap) => {
                 const display = document.getElementById('chat-display');
                 display.innerHTML = '';
@@ -191,11 +191,13 @@
                         if (m.media_type === 'photo') {
                             media = `<img src="${m.media_url}" class="rounded-xl shadow-sm mb-1 border border-slate-100" onclick="window.open('${m.media_url}')">`;
                         } else if (m.media_type === 'video') {
-                            media = `<video src="${m.media_url}" controls class="rounded-xl shadow-sm mb-1 border border-slate-100"></video>`;
+                            // បានបន្ថែម preload="none" និង max-w-full
+                            media = `<video src="${m.media_url}" controls preload="none" class="rounded-xl shadow-sm mb-1 border border-slate-100 max-w-full"></video>`;
                         } else if (m.media_type === 'voice' || m.media_type === 'audio') {
+                            // បានបន្ថែម preload="none" និងកែទំហំ w-full
                             media = `
-                                <div class="bg-slate-50 p-2 rounded-lg border border-slate-100 mb-1">
-                                    <audio controls class="h-8 w-48">
+                                <div class="bg-slate-50 p-2 rounded-lg border border-slate-100 mb-1 max-w-full">
+                                    <audio controls preload="none" class="h-8 w-full">
                                         <source src="${m.media_url}" type="audio/ogg">
                                         <source src="${m.media_url}" type="audio/mpeg">
                                     </audio>
