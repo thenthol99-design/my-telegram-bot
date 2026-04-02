@@ -110,7 +110,7 @@ def listen_for_admin_replies():
     db_firebase.collection("admin_replies").on_snapshot(on_snapshot)
 
 # ==========================================
-# មុខងារ Start & លុបប៊ូតុង
+# មុខងារ Start & ប៊ូតុងខាងក្រោម ៣ ជម្រើស
 # ==========================================
 
 @bot.message_handler(commands=['clear'])
@@ -123,52 +123,53 @@ def start(message):
     try:
         user_name = message.from_user.first_name
         
-        # បង្ខំលុបប៊ូតុងខាងក្រោមចោល
-        remove_keyboard = types.ReplyKeyboardRemove()
+        # បង្កើតផ្ទាំងប៊ូតុងខាងក្រោម ៣ ជម្រើស (Reply Keyboard)
+        reply_keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=2)
+        btn_deposit = types.KeyboardButton("💰 ដាក់លុយ")
+        btn_admin = types.KeyboardButton("✉️ ឆាតទៅ Admin")
+        btn_trial = types.KeyboardButton("🎁 គណនីសាកល្បង")
         
-        # បង្កើតប៊ូតុងជាប់សារ
-        inline_markup = types.InlineKeyboardMarkup(row_width=2)
-        btn_admin = types.InlineKeyboardButton("✉️ ឆាតទៅ Admin ↗️", url="https://t.me/Cockstn03TT")
-        btn_deposit = types.InlineKeyboardButton("💰 ដាក់លុយ (QR Code)", callback_data="deposit")
-        btn_trial = types.InlineKeyboardButton("🎁 គណនីសាកល្បង", callback_data="trial")
-        inline_markup.row(btn_admin, btn_deposit)
-        inline_markup.row(btn_trial)
+        reply_keyboard.add(btn_deposit, btn_admin)
+        reply_keyboard.add(btn_trial)
 
-        # ផ្ញើសារទី១ និងលុបប៊ូតុង
         bot.send_message(
             message.chat.id, 
-            f"សួស្ដី {user_name}! 👋\nសូមស្វាគមន៍មកកាន់ STN Play!", 
-            reply_markup=remove_keyboard
-        )
-        
-        # ផ្ញើសារទី២ និងបង្ហាញប៊ូតុងថ្មី
-        bot.send_message(
-            message.chat.id, 
-            "សូមជ្រើសរើសសេវាកម្ម៖", 
-            reply_markup=inline_markup
+            f"សួស្ដី {user_name}! 👋\nសូមស្វាគមន៍មកកាន់ STN Play!\n\n👇 សូមជ្រើសរើសសេវាកម្មនៅខាងក្រោម៖", 
+            reply_markup=reply_keyboard
         )
     except Exception as e:
         print(f"Error in start command: {e}")
 
-@bot.callback_query_handler(func=lambda call: True)
-def handle_query(call):
-    user_id = str(call.from_user.id)
-    first_name = call.from_user.first_name
-    category = "Target (Deposit)" if call.data == "deposit" else "Non-Target (Trial)"
-    
-    bot.answer_callback_query(call.id)
-    if call.data == "deposit":
-        bot.send_message(call.message.chat.id, "🏦 សូមផ្ញើសារទៅ Admin ដើម្បីទទួល QR Code ផ្លូវការ។")
-    elif call.data == "trial":
-        bot.send_message(call.message.chat.id, f"🎁 គណនីសាកល្បង៖\n{random.choice(TRIAL_ACCOUNTS)}")
+# --- មុខងារចាប់ពាក្យពេលភ្ញៀវចុចប៊ូតុងខាងក្រោម ---
+@bot.message_handler(func=lambda message: message.text in ["💰 ដាក់លុយ", "✉️ ឆាតទៅ Admin", "🎁 គណនីសាកល្បង"])
+def handle_bottom_buttons(message):
+    user_id = str(message.chat.id)
+    first_name = message.from_user.first_name
+    text = message.text
 
+    if text == "✉️ ឆាតទៅ Admin":
+        bot.send_message(message.chat.id, "✉️ សូមទាក់ទងមកកាន់ Admin តាមរយៈលីងនេះ៖\n👉 @Cockstn03TT")
+        return # មិនបាច់ Save ចូល Database ទេសម្រាប់អ្នកគ្រាន់តែសួរ
+
+    category = "Target (Deposit)" if text == "💰 ដាក់លុយ" else "Non-Target (Trial)"
+
+    if text == "💰 ដាក់លុយ":
+        bot.send_message(message.chat.id, "🏦 សូមផ្ញើសារទៅ Admin ដើម្បីទទួល QR Code ផ្លូវការ។")
+    elif text == "🎁 គណនីសាកល្បង":
+        bot.send_message(message.chat.id, f"🎁 គណនីសាកល្បង៖\n{random.choice(TRIAL_ACCOUNTS)}")
+
+    # កត់ត្រាអតិថិជនចូលទៅក្នុង Firebase និងលោតដំណឹងទៅ Admin
     db_firebase.collection("customers").document(user_id).set({
-        "name": first_name, "username": call.from_user.username, "category": category, "time": firestore.SERVER_TIMESTAMP
+        "name": first_name, "username": message.from_user.username, "category": category, "time": firestore.SERVER_TIMESTAMP
     })
-    bot.send_message(ADMIN_ID, f"🔔 *អតិថិជនថ្មី!*\nឈ្មោះ: {first_name}\nប្រភេទ: {category}\n🔗 [ឆាត](tg://user?id={user_id})", parse_mode="Markdown")
+    bot.send_message(ADMIN_ID, f"🔔 *អតិថិជនចុចប៊ូតុងខាងក្រោម!*\nឈ្មោះ: {first_name}\nសេវាកម្ម: {text}\n🔗 [ឆាត](tg://user?id={user_id})", parse_mode="Markdown")
 
 @bot.message_handler(content_types=['text', 'photo', 'video', 'voice'])
 def log_messages(message):
+    # ការពារកុំឱ្យពេលភ្ញៀវចុចប៊ូតុង វាលោតសារចូលទៅក្នុងប្រអប់ Chat ក្នុង Dashboard នាំឱ្យរញ៉េរញ៉ៃ
+    if message.text in ["💰 ដាក់លុយ", "✉️ ឆាតទៅ Admin", "🎁 គណនីសាកល្បង"]:
+        return
+
     user_id = str(message.chat.id)
     name = message.from_user.first_name
     text = message.text or message.caption or ""
