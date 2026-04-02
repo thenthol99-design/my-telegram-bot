@@ -11,15 +11,6 @@
     <meta name="apple-mobile-web-app-title" content="STN Admin">
     <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/8767/8767355.png">
     
-    <script>
-      if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker.register('./sw.js')
-            .then(reg => console.log('Service Worker Registered'))
-            .catch(err => console.log('Service Worker Failed', err));
-        });
-      }
-    </script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
@@ -28,14 +19,9 @@
         .chat-bubble-admin { background: #2563eb; color: white; align-self: flex-end; border-bottom-right-radius: 2px; }
         .chat-bubble-user { background: white; color: #1e293b; align-self: flex-start; border-bottom-left-radius: 2px; border: 1px solid #e2e8f0; }
         img, video { max-width: 250px; border-radius: 12px; margin-bottom: 5px; cursor: pointer; }
-        audio { height: 40px; width: 220px; margin-bottom: 5px; }
-        
+        audio { height: 35px; width: 200px; }
         .recording { animation: pulse 1.5s infinite; color: #ef4444; background: #fee2e2 !important; }
-        @keyframes pulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.1); }
-            100% { transform: scale(1); }
-        }
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
     </style>
 </head>
 <body class="bg-slate-100 min-h-screen font-sans">
@@ -52,7 +38,7 @@
                 <div class="bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
                     <h2 class="font-bold mb-4 flex items-center gap-2"><i class="fas fa-bullhorn text-orange-500"></i> Broadcast</h2>
                     <div class="space-y-3">
-                        <input type="file" id="bc-file" accept="image/*,video/*,audio/ogg,audio/mpeg" class="text-xs w-full p-2 bg-slate-50 rounded-lg">
+                        <input type="file" id="bc-file" accept="image/*,video/*,audio/*" class="text-xs w-full p-2 bg-slate-50 rounded-lg">
                         <select id="bc-target" class="w-full p-2 bg-slate-50 rounded-lg text-sm outline-none">
                             <option value="All">ទាំងអស់ (All)</option>
                             <option value="Target (Deposit)">អ្នកដាក់លុយ</option>
@@ -84,7 +70,7 @@
                         <div id="chat-display" class="flex-1 p-4 overflow-y-auto flex flex-col gap-3"></div>
 
                         <div class="p-4 bg-white border-t flex gap-3 items-center">
-                            <input type="file" id="chat-file" class="hidden" accept="image/*,video/*,audio/ogg">
+                            <input type="file" id="chat-file" class="hidden" accept="image/*,video/*,audio/*">
                             <button onclick="document.getElementById('chat-file').click()" class="text-gray-400 hover:text-blue-600 p-2 rounded-full hover:bg-slate-100 transition-all">
                                 <i class="fas fa-paperclip text-xl"></i>
                             </button>
@@ -101,9 +87,8 @@
             </div>
         </div>
     </div>
-    
+
     <script type="module">
-        // ... (កូដ Firebase របស់ BOSS ទុកដដែលទាំងអស់) ...
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
         import { getFirestore, collection, onSnapshot, addDoc, serverTimestamp, query, where, orderBy, doc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
         import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-storage.js";
@@ -127,6 +112,7 @@
         let audioChunks = [];
         let isRecording = false;
 
+        // ១. បង្ហាញបញ្ជីឈ្មោះភ្ញៀវ
         onSnapshot(collection(db, "customers"), (snap) => {
             const list = document.getElementById('customer-list');
             const sidebar = document.getElementById('chat-sidebar');
@@ -140,6 +126,7 @@
                     <span class="font-bold text-slate-700">${u.name}</span>
                     <button onclick="deleteUser('${id}')" class="text-red-300 hover:text-red-500"><i class="fas fa-trash"></i></button>
                 </div>`;
+                
                 const btn = document.createElement('div');
                 btn.className = `p-4 border-b cursor-pointer hover:bg-blue-50 transition-all flex items-center gap-3 ${activeId === id ? 'bg-blue-50 border-l-4 border-l-blue-600' : ''}`;
                 btn.innerHTML = `<div class="w-10 h-10 bg-gradient-to-tr from-blue-600 to-blue-400 rounded-full flex items-center justify-center text-white text-sm font-bold shadow-sm">${u.name[0]}</div>
@@ -149,10 +136,13 @@
             });
         });
 
+        // ២. មុខងារជ្រើសរើសភ្ញៀវ និងបង្ហាញ Player សំឡេង
         window.selectUser = function(id, name) {
             activeId = id;
             document.getElementById('chat-header').innerText = "Chat with: " + name;
+            
             if (unsubscribeChat) unsubscribeChat();
+
             const q = query(collection(db, "chats"), where("chat_id", "==", id), orderBy("timestamp", "asc"));
             unsubscribeChat = onSnapshot(q, (snap) => {
                 const display = document.getElementById('chat-display');
@@ -161,19 +151,31 @@
                     const m = msgDoc.data();
                     const isMe = m.sender === 'admin';
                     let media = "";
+                    
                     if (m.media_url) {
-                        if (m.media_type === 'photo') media = `<img src="${m.media_url}" onclick="window.open('${m.media_url}')">`;
-                        else if (m.media_type === 'video') media = `<video src="${m.media_url}" controls></video>`;
-                        else if (m.media_type === 'voice' || m.media_type === 'audio') media = `<audio src="${m.media_url}" controls></audio>`;
+                        if (m.media_type === 'photo') {
+                            media = `<img src="${m.media_url}" onclick="window.open('${m.media_url}')">`;
+                        } else if (m.media_type === 'video') {
+                            media = `<video src="${m.media_url}" controls></video>`;
+                        } else if (m.media_type === 'voice' || m.media_type === 'audio') {
+                            // បង្ហាញ Player សំឡេងឱ្យដើរ ១០០%
+                            media = `<audio controls class="mb-1"><source src="${m.media_url}" type="audio/ogg"><source src="${m.media_url}" type="audio/mpeg"></audio>`;
+                        }
                     }
-                    display.innerHTML += `<div class="p-3 max-w-[85%] rounded-2xl text-sm ${isMe ? 'chat-bubble-admin shadow-blue-200' : 'chat-bubble-user'} shadow-sm">
-                        ${media} ${m.text ? `<div class="${media ? 'mt-2' : ''}">${m.text}</div>` : ""}
-                    </div>`;
+
+                    display.innerHTML += `
+                        <div class="flex ${isMe ? 'justify-end' : 'justify-start'} w-full mb-2">
+                            <div class="p-3 max-w-[85%] rounded-2xl text-sm ${isMe ? 'chat-bubble-admin shadow-blue-200' : 'chat-bubble-user'} shadow-sm">
+                                ${media} 
+                                ${m.text ? `<div class="${media ? 'mt-1' : ''} break-words">${m.text}</div>` : ""}
+                            </div>
+                        </div>`;
                 });
                 display.scrollTop = display.scrollHeight;
             });
         };
 
+        // ៣. មុខងារថតសំឡេង Admin ផ្ញើទៅវិញ
         window.toggleRecording = async function() {
             if (!activeId) return alert("សូមជ្រើសរើសភ្ញៀវម្នាក់សិន!");
             const micIcon = document.getElementById('mic-icon');
@@ -182,9 +184,7 @@
             if (!isRecording) {
                 try {
                     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                    const mimeType = MediaRecorder.isTypeSupported('audio/ogg;codecs=opus') 
-                                     ? 'audio/ogg;codecs=opus' 
-                                     : 'audio/webm;codecs=opus';
+                    const mimeType = MediaRecorder.isTypeSupported('audio/ogg;codecs=opus') ? 'audio/ogg;codecs=opus' : 'audio/webm;codecs=opus';
                     mediaRecorder = new MediaRecorder(stream, { mimeType });
                     audioChunks = [];
                     mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
@@ -212,6 +212,7 @@
             }
         };
 
+        // ៤. មុខងារផ្ញើសារអក្សរ និងរូបភាព
         window.sendReply = async function() {
             const input = document.getElementById('chat-input');
             const fileInput = document.getElementById('chat-file');
@@ -226,14 +227,15 @@
                     mUrl = await getDownloadURL(snapshot.ref);
                     if (file.type.includes('image')) mType = 'photo';
                     else if (file.type.includes('video')) mType = 'video';
-                    else if (file.type.includes('audio') || file.name.endsWith('.ogg')) mType = 'voice';
+                    else if (file.type.includes('audio')) mType = 'voice';
                 }
                 await addDoc(collection(db, "admin_replies"), { chat_id: activeId, text: text, media_url: mUrl, media_type: mType, timestamp: serverTimestamp() });
                 await addDoc(collection(db, "chats"), { chat_id: activeId, name: "Admin", text: text, media_url: mUrl, media_type: mType, sender: "admin", timestamp: serverTimestamp() });
                 input.value = ''; fileInput.value = '';
-            } catch (e) { alert("Error!"); }
+            } catch (e) { console.log(e); }
         };
 
+        // ៥. មុខងារ Broadcast
         window.handleBroadcast = async function() {
             const file = document.getElementById('bc-file').files[0];
             const msg = document.getElementById('bc-msg').value;
@@ -250,7 +252,7 @@
                     mUrl = await getDownloadURL(snapshot.ref);
                     if (file.type.includes('image')) mType = 'photo';
                     else if (file.type.includes('video')) mType = 'video';
-                    else if (file.type.includes('audio') || file.name.endsWith('.ogg')) mType = 'voice';
+                    else if (file.type.includes('audio')) mType = 'voice';
                 }
                 await addDoc(collection(db, "broadcasts"), { message: msg, target_category: target, media_type: mType, media_url: mUrl, delay_seconds: parseInt(delay) || 0, timestamp: serverTimestamp() });
                 alert("✅ Broadcast Started!");
