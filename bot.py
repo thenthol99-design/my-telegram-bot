@@ -118,7 +118,9 @@ def listen_for_admin_replies():
 @bot.message_handler(commands=['start'])
 def start(message):
     user_name = message.from_user.first_name
-    reply_markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    
+    # ១. កូដសម្រាប់បញ្ជាឱ្យ Telegram លុបប៊ូតុងខាងក្រោមចោល
+    remove_keyboard = types.ReplyKeyboardRemove()
     
     inline_markup = types.InlineKeyboardMarkup(row_width=2)
     btn_admin = types.InlineKeyboardButton("✉️ ឆាតទៅ Admin ↗️", url="https://t.me/Cockstn03TT")
