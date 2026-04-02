@@ -8,7 +8,6 @@ import threading
 import time
 import random
 import uuid
-from apscheduler.schedulers.background import BackgroundScheduler
 
 # --- កំណត់ការកំណត់ ---
 API_TOKEN = os.getenv('API_TOKEN')
@@ -22,7 +21,6 @@ if FIREBASE_CONFIG:
     config_data = json.loads(FIREBASE_CONFIG)
     cred = credentials.Certificate(config_data)
     
-    # កូដថ្មីសម្រាប់ភ្ជាប់ Storage Bucket (ដើម្បីឱ្យមើលឃើញរូបភាព/វីដេអូ)
     firebase_admin.initialize_app(cred, {
         'storageBucket': 'my-telegram-bot-46df4.firebasestorage.app'
     })
@@ -44,7 +42,7 @@ TRIAL_ACCOUNTS = [
     "👉 Username: test10 \n🔑 Password: aA123456()"
 ]
 
-# --- មុខងារ Upload Media ពី Telegram ទៅ Firebase Storage ---
+# --- មុខងារ Upload Media ---
 def upload_telegram_file(message, file_type):
     try:
         if file_type == 'photo': file_id = message.photo[-1].file_id
@@ -55,7 +53,6 @@ def upload_telegram_file(message, file_type):
         file_info = bot.get_file(file_id)
         downloaded_file = bot.download_file(file_info.file_path)
         
-        # កំណត់ឱ្យប្រើកន្ទុយ .ogg ជានិច្ចសម្រាប់សំឡេង ដើម្បីឱ្យចេញជា Voice Note ស្អាត
         ext = 'jpg' if file_type == 'photo' else 'mp4' if file_type == 'video' else 'ogg'
         file_name = f"chat_media/{uuid.uuid4()}.{ext}"
         blob = bucket.blob(file_name)
@@ -68,7 +65,7 @@ def upload_telegram_file(message, file_type):
         print(f"Upload Error: {e}")
         return None, "none"
 
-# --- មុខងារផ្ញើសារបណ្ដាក់គ្នា (Anti-Spam) បង្ខំឱ្យផ្ញើជា Voice Note (.ogg) ---
+# --- មុខងារផ្ញើសារបណ្ដាក់គ្នា ---
 def process_staggered_broadcast(message_text, target_cat, media_url, media_type, delay_seconds):
     customers = db_firebase.collection("customers").stream()
     count = 0
@@ -82,7 +79,6 @@ def process_staggered_broadcast(message_text, target_cat, media_url, media_type,
                 elif media_type == 'video' and media_url: 
                     bot.send_video(chat_id, media_url, caption=message_text)
                 elif (media_type == 'voice' or media_type == 'audio') and media_url: 
-                    # ប្រើ send_voice ដើម្បីបង្ខំឱ្យចេញជា "សារសំឡេងរាងមូល" (.ogg)
                     bot.send_voice(chat_id, media_url, caption=message_text)
                 else: 
                     bot.send_message(chat_id, message_text)
@@ -92,7 +88,7 @@ def process_staggered_broadcast(message_text, target_cat, media_url, media_type,
             except: pass
     bot.send_message(ADMIN_ID, f"✅ ការផ្ញើបណ្ដាក់គ្នាទៅភ្ញៀវ {count} នាក់ ចប់សព្វគ្រប់!")
 
-# --- មុខងារ Listen សម្រាប់ Admin ឆ្លើយតបពី Dashboard (គាំទ្រ Voice Note) ---
+# --- មុខងារ Listen សម្រាប់ Admin ---
 def listen_for_admin_replies():
     def on_snapshot(col_snapshot, changes, read_time):
         for change in changes:
@@ -107,50 +103,52 @@ def listen_for_admin_replies():
                     if m_type == 'photo' and m_url: bot.send_photo(chat_id, m_url, caption=text)
                     elif m_type == 'video' and m_url: bot.send_video(chat_id, m_url, caption=text)
                     elif (m_type == 'voice' or m_type == 'audio') and m_url: 
-                        # បង្ខំឱ្យចេញជា Voice Note នៅពេលឆ្លើយតបចេញពី Dashboard
                         bot.send_voice(chat_id, m_url, caption=text)
                     elif text: bot.send_message(chat_id, text)
                 except: pass
                 db_firebase.collection("admin_replies").document(change.document.id).delete()
     db_firebase.collection("admin_replies").on_snapshot(on_snapshot)
 
-# --- មុខងារ Start & Callback ---
-@bot.message_handler(commands=['start'])
-def start(message):
-    user_name = message.from_user.first_name
-    
-    # ១. បង្កើតបញ្ជាលុបប៊ូតុងចាស់ (ReplyKeyboardRemove)
-    remove_keyboard = types.ReplyKeyboardRemove()
-    
-    # ២. បង្កើតប៊ូតុង Inline ជាប់សារ
-    inline_markup = types.InlineKeyboardMarkup(row_width=2)
-    btn_admin = types.InlineKeyboardButton("✉️ ឆាតទៅ Admin ↗️", url="https://t.me/Cockstn03TT")
-    btn_deposit = types.InlineKeyboardButton("💰 ដាក់លុយ (QR Code)", callback_data="deposit")
-    btn_trial = types.InlineKeyboardButton("🎁 គណនីសាកល្បង", callback_data="trial")
-    inline_markup.row(btn_admin, btn_deposit)
-    inline_markup.row(btn_trial)
+# ==========================================
+# មុខងារ Start & លុបប៊ូតុង
+# ==========================================
 
-    # ៣. ផ្ញើសារស្វាគមន៍ (កែត្រង់នេះ៖ ប្រើ remove_keyboard ដើម្បីឱ្យប៊ូតុងខាងក្រោមបាត់)
-    bot.send_message(
-        message.chat.id, 
-        f"សួស្ដី {user_name}! 👋\nសូមស្វាគមន៍មកកាន់ STN Play!", 
-        reply_markup=remove_keyboard # កែពី reply_markup មកជា remove_keyboard
-    )
-    
-    bot.send_message(
-        message.chat.id, 
-        "សូមជ្រើសរើសសេវាកម្ម៖", 
-        reply_markup=inline_markup
-    )
-
-# --- មុខងារបង្ខំលុប (បន្ថែមទុកសម្រាប់ករណីប៊ូតុងនៅរឹងក្បាល) ---
 @bot.message_handler(commands=['clear'])
 def clear_keyboard(message):
-    bot.send_message(
-        message.chat.id, 
-        "🧹 បោសសម្អាតប៊ូតុងរួចរាល់!", 
-        reply_markup=types.ReplyKeyboardRemove()
-    )
+    remove_board = types.ReplyKeyboardRemove()
+    bot.send_message(message.chat.id, "🧹 បានបោសសម្អាតប៊ូតុងចេញរៀបរយហើយ!", reply_markup=remove_board)
+
+@bot.message_handler(commands=['start'])
+def start(message):
+    try:
+        user_name = message.from_user.first_name
+        
+        # បង្ខំលុបប៊ូតុងខាងក្រោមចោល
+        remove_keyboard = types.ReplyKeyboardRemove()
+        
+        # បង្កើតប៊ូតុងជាប់សារ
+        inline_markup = types.InlineKeyboardMarkup(row_width=2)
+        btn_admin = types.InlineKeyboardButton("✉️ ឆាតទៅ Admin ↗️", url="https://t.me/Cockstn03TT")
+        btn_deposit = types.InlineKeyboardButton("💰 ដាក់លុយ (QR Code)", callback_data="deposit")
+        btn_trial = types.InlineKeyboardButton("🎁 គណនីសាកល្បង", callback_data="trial")
+        inline_markup.row(btn_admin, btn_deposit)
+        inline_markup.row(btn_trial)
+
+        # ផ្ញើសារទី១ និងលុបប៊ូតុង
+        bot.send_message(
+            message.chat.id, 
+            f"សួស្ដី {user_name}! 👋\nសូមស្វាគមន៍មកកាន់ STN Play!", 
+            reply_markup=remove_keyboard
+        )
+        
+        # ផ្ញើសារទី២ និងបង្ហាញប៊ូតុងថ្មី
+        bot.send_message(
+            message.chat.id, 
+            "សូមជ្រើសរើសសេវាកម្ម៖", 
+            reply_markup=inline_markup
+        )
+    except Exception as e:
+        print(f"Error in start command: {e}")
 
 @bot.callback_query_handler(func=lambda call: True)
 def handle_query(call):
@@ -169,7 +167,6 @@ def handle_query(call):
     })
     bot.send_message(ADMIN_ID, f"🔔 *អតិថិជនថ្មី!*\nឈ្មោះ: {first_name}\nប្រភេទ: {category}\n🔗 [ឆាត](tg://user?id={user_id})", parse_mode="Markdown")
 
-# --- មុខងារកត់ត្រាគ្រប់សារ (Text, Photo, Video, Voice) ទៅ Dashboard ---
 @bot.message_handler(content_types=['text', 'photo', 'video', 'voice'])
 def log_messages(message):
     user_id = str(message.chat.id)
@@ -186,7 +183,6 @@ def log_messages(message):
         "sender": "user", "timestamp": firestore.SERVER_TIMESTAMP
     })
 
-# --- បើក Listener ទាំងអស់ ---
 def listen_broadcasts():
     def on_snapshot(col_snapshot, changes, read_time):
         for change in changes:
@@ -198,4 +194,6 @@ def listen_broadcasts():
 
 threading.Thread(target=listen_broadcasts, daemon=True).start()
 threading.Thread(target=listen_for_admin_replies, daemon=True).start()
+
+print("🤖 Bot is running...")
 bot.infinity_polling()
