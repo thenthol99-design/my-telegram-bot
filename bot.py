@@ -8,7 +8,7 @@ import threading
 import time
 import random
 import uuid
-
+ 
 # --- កំណត់ការកំណត់ ---
 API_TOKEN = os.getenv('API_TOKEN')
 FIREBASE_CONFIG = os.getenv('FIREBASE_CONFIG')
