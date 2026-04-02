@@ -119,7 +119,6 @@ def listen_for_admin_replies():
 def start(message):
     user_name = message.from_user.first_name
     reply_markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-    reply_markup.add(types.KeyboardButton("🔲 ចូលលេង"))
     
     inline_markup = types.InlineKeyboardMarkup(row_width=2)
     btn_admin = types.InlineKeyboardButton("✉️ ឆាតទៅ Admin ↗️", url="https://t.me/Cockstn03TT")
