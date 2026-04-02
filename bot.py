@@ -30,16 +30,16 @@ if FIREBASE_CONFIG:
 
 # --- បញ្ជីគណនីសាកល្បង ---
 TRIAL_ACCOUNTS = [
-    "👉 Username: test01 \n🔑 Password: aA123456()",
-    "👉 Username: test02 \n🔑 Password: aA123456()",
-    "👉 Username: test03 \n🔑 Password: aA123456()",
-    "👉 Username: test04 \n🔑 Password: aA123456()",
-    "👉 Username: test05 \n🔑 Password: aA123456()",
-    "👉 Username: test06 \n🔑 Password: aA123456()",
-    "👉 Username: test07 \n🔑 Password: aA123456()",
-    "👉 Username: test08 \n🔑 Password: aA123456()",
-    "👉 Username: test09 \n🔑 Password: aA123456()",
-    "👉 Username: test10 \n🔑 Password: aA123456()"
+    "👉 Username: CFRMLLII001 \n🔑 Password: 123456",
+    "👉 Username: CFRMLLII002 \n🔑 Password: 123457",
+    "👉 Username: CFRMLLII003 \n🔑 Password: 123458",
+    "👉 Username: CFRMLLII004 \n🔑 Password: 123459",
+    "👉 Username: CFRMLLII005 \n🔑 Password: 1234510",
+    "👉 Username: CFRMLLII006 \n🔑 Password: 1234511",
+    "👉 Username: CFRMLLII007 \n🔑 Password: 1234512",
+    "👉 Username: CFRMLLII008 \n🔑 Password: 1234513",
+    "👉 Username: CFRMLLII009 \n🔑 Password: 1234514",
+    "👉 Username: CFRMLLII010 \n🔑 Password: 1234515"
 ]
 
 # --- មុខងារ Upload Media ---
