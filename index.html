@@ -24,57 +24,64 @@
         @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
     </style>
 </head>
-<body class="bg-slate-100 min-h-screen font-sans">
-    <div class="max-w-7xl mx-auto py-8 px-4">
-        <div class="flex items-center justify-between mb-8 bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
+<body class="bg-slate-100 min-h-screen font-sans text-slate-900">
+    <div class="max-w-7xl mx-auto py-6 px-4">
+        <!-- Header -->
+        <div class="flex items-center justify-between mb-6 bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
             <h1 class="text-2xl font-black text-slate-800 flex items-center gap-3">
                 <i class="fas fa-shield-check text-blue-600"></i> STN Play Control Center
             </h1>
-            <span id="user-count-badge" class="bg-blue-600 text-white px-4 py-1 rounded-full text-xs font-bold">0 Users</span>
+            <span id="user-count-badge" class="bg-blue-600 text-white px-4 py-1 rounded-full text-xs font-bold shadow-md shadow-blue-200">0 Users</span>
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Left Column: Broadcast & Customer List -->
             <div class="lg:col-span-1 space-y-6">
                 <div class="bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
-                    <h2 class="font-bold mb-4 flex items-center gap-2"><i class="fas fa-bullhorn text-orange-500"></i> Broadcast</h2>
+                    <h2 class="font-bold mb-4 flex items-center gap-2 text-slate-700"><i class="fas fa-bullhorn text-orange-500"></i> Broadcast</h2>
                     <div class="space-y-3">
-                        <input type="file" id="bc-file" accept="image/*,video/*,audio/*" class="text-xs w-full p-2 bg-slate-50 rounded-lg">
-                        <select id="bc-target" class="w-full p-2 bg-slate-50 rounded-lg text-sm outline-none">
+                        <input type="file" id="bc-file" accept="image/*,video/*,audio/*" class="text-xs w-full p-2 bg-slate-50 rounded-lg border border-slate-100">
+                        <select id="bc-target" class="w-full p-2 bg-slate-50 rounded-lg text-sm outline-none border border-slate-100">
                             <option value="All">ទាំងអស់ (All)</option>
                             <option value="Target (Deposit)">អ្នកដាក់លុយ</option>
                             <option value="Non-Target (Trial)">អ្នកសាកល្បង</option>
                         </select>
-                        <input type="number" id="bc-delay" value="0" class="w-full p-2 bg-slate-50 rounded-lg text-sm" placeholder="Delay (seconds)">
-                        <textarea id="bc-msg" rows="2" class="w-full p-2 bg-slate-50 rounded-lg text-sm outline-none" placeholder="Message..."></textarea>
+                        <input type="number" id="bc-delay" value="0" class="w-full p-2 bg-slate-50 rounded-lg text-sm border border-slate-100" placeholder="Delay (seconds)">
+                        <textarea id="bc-msg" rows="2" class="w-full p-2 bg-slate-50 rounded-lg text-sm outline-none border border-slate-100" placeholder="Message..."></textarea>
                         <button onclick="handleBroadcast()" id="bc-btn" class="w-full bg-blue-600 text-white font-bold py-3 rounded-xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-100">ផ្ញើចេញ</button>
                     </div>
                 </div>
 
                 <div class="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
-                    <div class="p-4 font-bold border-b bg-slate-50/50">👥 អតិថិជន</div>
+                    <div class="p-4 font-bold border-b bg-slate-50/50 flex items-center gap-2"><i class="fas fa-users text-blue-500"></i> អតិថិជន</div>
                     <div class="max-h-[300px] overflow-y-auto" id="customer-list"></div>
                 </div>
             </div>
 
+            <!-- Right Column: Chat Inbox -->
             <div class="lg:col-span-2">
-                <div class="bg-white rounded-3xl shadow-sm border border-gray-100 flex overflow-hidden h-[700px]">
-                    <div class="w-1/3 border-r bg-slate-50 flex flex-col">
-                        <div class="p-4 font-bold border-b bg-white">💬 Inbox</div>
+                <div class="bg-white rounded-3xl shadow-sm border border-gray-100 flex overflow-hidden h-[720px]">
+                    <!-- Chat Sidebar -->
+                    <div class="w-1/3 border-r bg-slate-50/50 flex flex-col">
+                        <div class="p-4 font-bold border-b bg-white flex items-center gap-2"><i class="fas fa-inbox text-blue-500"></i> Inbox</div>
                         <div id="chat-sidebar" class="flex-1 overflow-y-auto"></div>
                     </div>
 
-                    <div class="flex-1 flex flex-col bg-slate-50">
-                        <div id="chat-header" class="p-4 font-bold text-blue-600 border-b bg-white flex justify-between items-center">
-                            <span>សូមរើសភ្ញៀវម្នាក់...</span>
+                    <!-- Chat Box -->
+                    <div class="flex-1 flex flex-col bg-white">
+                        <div id="chat-header" class="p-4 font-bold text-blue-600 border-b bg-white flex items-center gap-3">
+                            <span class="text-slate-400 font-normal italic text-sm">សូមរើសភ្ញៀវម្នាក់ដើម្បីចាប់ផ្ដើមឆាត...</span>
                         </div>
-                        <div id="chat-display" class="flex-1 p-4 overflow-y-auto flex flex-col gap-3"></div>
+                        
+                        <div id="chat-display" class="flex-1 p-4 overflow-y-auto flex flex-col gap-4 bg-slate-50/30"></div>
 
+                        <!-- Chat Input -->
                         <div class="p-4 bg-white border-t flex gap-3 items-center">
                             <input type="file" id="chat-file" class="hidden" accept="image/*,video/*,audio/*">
-                            <button onclick="document.getElementById('chat-file').click()" class="text-gray-400 hover:text-blue-600 p-2 rounded-full hover:bg-slate-100 transition-all">
+                            <button onclick="document.getElementById('chat-file').click()" class="text-slate-400 hover:text-blue-600 p-2 rounded-full hover:bg-slate-100 transition-all">
                                 <i class="fas fa-paperclip text-xl"></i>
                             </button>
-                            <button id="mic-btn" onclick="toggleRecording()" class="text-gray-400 p-2 rounded-full hover:bg-slate-100 transition-all">
+                            <button id="mic-btn" onclick="toggleRecording()" class="text-slate-400 p-2 rounded-full hover:bg-slate-100 transition-all">
                                 <i class="fas fa-microphone text-xl" id="mic-icon"></i>
                             </button>
                             <textarea id="chat-input" rows="1" class="flex-1 p-3 bg-slate-100 border-none rounded-2xl outline-none focus:ring-1 focus:ring-blue-500 text-sm resize-none" placeholder="សរសេរសារ..."></textarea>
@@ -90,7 +97,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-        import { getFirestore, collection, onSnapshot, addDoc, serverTimestamp, query, where, orderBy, doc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+        import { getFirestore, collection, onSnapshot, addDoc, serverTimestamp, query, where, orderBy, doc, deleteDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
         import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-storage.js";
 
         const firebaseConfig = {
@@ -112,7 +119,7 @@
         let audioChunks = [];
         let isRecording = false;
 
-        // ១. បង្ហាញបញ្ជីឈ្មោះភ្ញៀវ
+        // ១. បង្ហាញបញ្ជីឈ្មោះភ្ញៀវក្នុង Sidebar
         onSnapshot(collection(db, "customers"), (snap) => {
             const list = document.getElementById('customer-list');
             const sidebar = document.getElementById('chat-sidebar');
@@ -122,24 +129,51 @@
             snap.forEach(userDoc => {
                 const u = userDoc.data();
                 const id = userDoc.id;
+
+                // Avatar ក្នុង Sidebar
+                const avatarImg = u.profile_url 
+                    ? `<img src="${u.profile_url}" class="w-10 h-10 rounded-full object-cover shadow-sm border border-slate-200">`
+                    : `<div class="w-10 h-10 bg-gradient-to-tr from-blue-600 to-blue-400 rounded-full flex items-center justify-center text-white text-sm font-bold shadow-sm">${u.name ? u.name[0] : '?'}</div>`;
+
+                // បញ្ជីអតិថិជនសរុប (ក្រោម Broadcast)
                 list.innerHTML += `<div class="p-3 border-b flex justify-between items-center text-xs">
-                    <span class="font-bold text-slate-700">${u.name}</span>
-                    <button onclick="deleteUser('${id}')" class="text-red-300 hover:text-red-500"><i class="fas fa-trash"></i></button>
+                    <div class="flex items-center gap-2">
+                        <span class="font-bold text-slate-700">${u.name}</span>
+                    </div>
+                    <button onclick="deleteUser('${id}')" class="text-red-300 hover:text-red-500 transition-colors"><i class="fas fa-trash"></i></button>
                 </div>`;
                 
+                // បញ្ជី Inbox
                 const btn = document.createElement('div');
-                btn.className = `p-4 border-b cursor-pointer hover:bg-blue-50 transition-all flex items-center gap-3 ${activeId === id ? 'bg-blue-50 border-l-4 border-l-blue-600' : ''}`;
-                btn.innerHTML = `<div class="w-10 h-10 bg-gradient-to-tr from-blue-600 to-blue-400 rounded-full flex items-center justify-center text-white text-sm font-bold shadow-sm">${u.name[0]}</div>
-                    <div><div class="text-sm font-bold text-slate-800">${u.name}</div><div class="text-[10px] text-gray-400">${u.category || 'General'}</div></div>`;
-                btn.onclick = () => selectUser(id, u.name);
+                btn.className = `p-4 border-b cursor-pointer hover:bg-white transition-all flex items-center gap-3 ${activeId === id ? 'bg-white border-l-4 border-l-blue-600 shadow-sm' : ''}`;
+                btn.innerHTML = `
+                    ${avatarImg}
+                    <div class="flex-1 min-w-0">
+                        <div class="text-sm font-bold text-slate-800 truncate">${u.name}</div>
+                        <div class="text-[10px] text-gray-400">${u.category || 'General'}</div>
+                    </div>`;
+                btn.onclick = () => selectUser(id, u.name, u.profile_url);
                 sidebar.appendChild(btn);
             });
         });
 
-        // ២. មុខងារជ្រើសរើសភ្ញៀវ និងបង្ហាញ Player សំឡេង
-        window.selectUser = function(id, name) {
+        // ២. មុខងារជ្រើសរើសភ្ញៀវ និងបង្ហាញសារឆាត
+        window.selectUser = async function(id, name, pUrl) {
             activeId = id;
-            document.getElementById('chat-header').innerText = "Chat with: " + name;
+            
+            // បង្ហាញ Header ជាមួយរូបភ្ញៀវ
+            const headerAvatar = pUrl 
+                ? `<img src="${pUrl}" class="w-8 h-8 rounded-full object-cover">`
+                : `<div class="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white text-xs font-bold">${name[0]}</div>`;
+            
+            document.getElementById('chat-header').innerHTML = `
+                <div class="flex items-center gap-3">
+                    ${headerAvatar}
+                    <div>
+                        <div class="text-slate-800">${name}</div>
+                        <div class="text-[10px] text-green-500 font-normal">Active Now</div>
+                    </div>
+                </div>`;
             
             if (unsubscribeChat) unsubscribeChat();
 
@@ -147,6 +181,7 @@
             unsubscribeChat = onSnapshot(q, (snap) => {
                 const display = document.getElementById('chat-display');
                 display.innerHTML = '';
+                
                 snap.forEach(msgDoc => {
                     const m = msgDoc.data();
                     const isMe = m.sender === 'admin';
@@ -154,20 +189,31 @@
                     
                     if (m.media_url) {
                         if (m.media_type === 'photo') {
-                            media = `<img src="${m.media_url}" onclick="window.open('${m.media_url}')">`;
+                            media = `<img src="${m.media_url}" class="rounded-xl shadow-sm mb-1 border border-slate-100" onclick="window.open('${m.media_url}')">`;
                         } else if (m.media_type === 'video') {
-                            media = `<video src="${m.media_url}" controls></video>`;
+                            media = `<video src="${m.media_url}" controls class="rounded-xl shadow-sm mb-1 border border-slate-100"></video>`;
                         } else if (m.media_type === 'voice' || m.media_type === 'audio') {
-                            // បង្ហាញ Player សំឡេងឱ្យដើរ ១០០%
-                            media = `<audio controls class="mb-1"><source src="${m.media_url}" type="audio/ogg"><source src="${m.media_url}" type="audio/mpeg"></audio>`;
+                            media = `
+                                <div class="bg-slate-50 p-2 rounded-lg border border-slate-100 mb-1">
+                                    <audio controls class="h-8 w-48">
+                                        <source src="${m.media_url}" type="audio/ogg">
+                                        <source src="${m.media_url}" type="audio/mpeg">
+                                    </audio>
+                                </div>`;
                         }
                     }
 
+                    // Avatar តូចក្នុងប្រអប់ឆាតសម្រាប់ភ្ញៀវ
+                    const chatAvatar = !isMe ? (pUrl 
+                        ? `<img src="${pUrl}" class="w-7 h-7 rounded-full object-cover mt-auto">`
+                        : `<div class="w-7 h-7 bg-slate-300 rounded-full flex items-center justify-center text-white text-[10px] font-bold mt-auto">${name[0]}</div>`) : '';
+
                     display.innerHTML += `
-                        <div class="flex ${isMe ? 'justify-end' : 'justify-start'} w-full mb-2">
-                            <div class="p-3 max-w-[85%] rounded-2xl text-sm ${isMe ? 'chat-bubble-admin shadow-blue-200' : 'chat-bubble-user'} shadow-sm">
+                        <div class="flex ${isMe ? 'justify-end' : 'justify-start'} w-full gap-2">
+                            ${chatAvatar}
+                            <div class="p-3 max-w-[80%] rounded-2xl text-sm ${isMe ? 'chat-bubble-admin shadow-blue-200' : 'chat-bubble-user shadow-sm'}">
                                 ${media} 
-                                ${m.text ? `<div class="${media ? 'mt-1' : ''} break-words">${m.text}</div>` : ""}
+                                ${m.text ? `<div class="break-words">${m.text}</div>` : ""}
                             </div>
                         </div>`;
                 });
@@ -175,7 +221,7 @@
             });
         };
 
-        // ៣. មុខងារថតសំឡេង Admin ផ្ញើទៅវិញ
+        // ៣. មុខងារថតសំឡេង Admin
         window.toggleRecording = async function() {
             if (!activeId) return alert("សូមជ្រើសរើសភ្ញៀវម្នាក់សិន!");
             const micIcon = document.getElementById('mic-icon');
@@ -194,15 +240,18 @@
                         micBtn.innerHTML = '<i class="fas fa-spinner fa-spin text-blue-600"></i>';
                         const snapshot = await uploadBytes(storageRef, audioBlob);
                         const mUrl = await getDownloadURL(snapshot.ref);
+                        
+                        const msgData = { chat_id: activeId, name: "Admin", text: "", media_url: mUrl, media_type: "voice", sender: "admin", timestamp: serverTimestamp() };
                         await addDoc(collection(db, "admin_replies"), { chat_id: activeId, text: "", media_url: mUrl, media_type: "voice", timestamp: serverTimestamp() });
-                        await addDoc(collection(db, "chats"), { chat_id: activeId, name: "Admin", text: "", media_url: mUrl, media_type: "voice", sender: "admin", timestamp: serverTimestamp() });
+                        await addDoc(collection(db, "chats"), msgData);
+                        
                         micBtn.innerHTML = '<i class="fas fa-microphone text-xl" id="mic-icon"></i>';
                     };
                     mediaRecorder.start();
                     isRecording = true;
                     micIcon.classList.replace('fa-microphone', 'fa-stop');
                     micBtn.classList.add('recording');
-                } catch (err) { alert("សូម Allow Microphone!"); }
+                } catch (err) { alert("សូមអនុញ្ញាតប្រើ Microphone!"); }
             } else {
                 mediaRecorder.stop();
                 mediaRecorder.stream.getTracks().forEach(track => track.stop());
@@ -212,13 +261,14 @@
             }
         };
 
-        // ៤. មុខងារផ្ញើសារអក្សរ និងរូបភាព
+        // ៤. មុខងារផ្ញើសារ Admin
         window.sendReply = async function() {
             const input = document.getElementById('chat-input');
             const fileInput = document.getElementById('chat-file');
             const file = fileInput.files[0];
             const text = input.value.trim();
             if (!activeId || (!text && !file)) return;
+            
             try {
                 let mUrl = "", mType = "none";
                 if (file) {
@@ -229,10 +279,13 @@
                     else if (file.type.includes('video')) mType = 'video';
                     else if (file.type.includes('audio')) mType = 'voice';
                 }
+                
+                const msgData = { chat_id: activeId, name: "Admin", text: text, media_url: mUrl, media_type: mType, sender: "admin", timestamp: serverTimestamp() };
                 await addDoc(collection(db, "admin_replies"), { chat_id: activeId, text: text, media_url: mUrl, media_type: mType, timestamp: serverTimestamp() });
-                await addDoc(collection(db, "chats"), { chat_id: activeId, name: "Admin", text: text, media_url: mUrl, media_type: mType, sender: "admin", timestamp: serverTimestamp() });
+                await addDoc(collection(db, "chats"), msgData);
+                
                 input.value = ''; fileInput.value = '';
-            } catch (e) { console.log(e); }
+            } catch (e) { console.error(e); }
         };
 
         // ៥. មុខងារ Broadcast
@@ -255,13 +308,14 @@
                     else if (file.type.includes('audio')) mType = 'voice';
                 }
                 await addDoc(collection(db, "broadcasts"), { message: msg, target_category: target, media_type: mType, media_url: mUrl, delay_seconds: parseInt(delay) || 0, timestamp: serverTimestamp() });
-                alert("✅ Broadcast Started!");
+                alert("✅ ការផ្ញើព័ត៌មានត្រូវបានចាប់ផ្ដើម!");
                 document.getElementById('bc-msg').value = '';
+                document.getElementById('bc-file').value = '';
             } catch (e) { alert("Error!"); }
             btn.disabled = false; btn.innerText = "ផ្ញើចេញ";
         };
 
-        window.deleteUser = async (id) => { if(confirm("Delete User?")) await deleteDoc(doc(db, "customers", id)); };
+        window.deleteUser = async (id) => { if(confirm("តើអ្នកពិតជាចង់លុបអតិថិជននេះមែនទេ?")) await deleteDoc(doc(db, "customers", id)); };
     </script>
 </body>
 </html>
