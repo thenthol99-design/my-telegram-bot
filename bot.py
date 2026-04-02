@@ -118,12 +118,45 @@ def clear_keyboard(message):
     remove_board = types.ReplyKeyboardRemove()
     bot.send_message(message.chat.id, "🧹 បានបោសសម្អាតប៊ូតុងចេញរៀបរយហើយ!", reply_markup=remove_board)
 
+# --- មុខងារទាញរូបប្រូហ្វាលភ្ញៀវ ---
+def get_user_profile_photo(user_id):
+    try:
+        photos = bot.get_user_profile_photos(user_id)
+        if photos.total_count > 0:
+            file_id = photos.photos[0][-1].file_id # រូបចុងក្រោយគេ (ច្បាស់ជាងគេ)
+            file_info = bot.get_file(file_id)
+            downloaded_file = bot.download_file(file_info.file_path)
+            
+            # Upload ទៅ Firebase Storage
+            file_name = f"profile_photos/{user_id}.jpg"
+            blob = bucket.blob(file_name)
+            blob.upload_from_string(downloaded_file, content_type="image/jpeg")
+            blob.make_public()
+            return blob.public_url
+    except Exception as e:
+        print(f"Error getting profile photo: {e}")
+    return None
+
+# --- មុខងារ Start ពេញលេញ (ទាញរូប + បង្ហាញប៊ូតុង) ---
 @bot.message_handler(commands=['start'])
 def start(message):
     try:
+        user_id = str(message.chat.id)
         user_name = message.from_user.first_name
+        username = message.from_user.username
         
-        # ១. បង្កើតផ្ទាំងប៊ូតុងខាងក្រោម ៣ ជម្រើស
+        # ១. ទាញរូបប្រូហ្វាល និងរក្សាទុកទិន្នន័យទៅ Firebase
+        profile_url = get_user_profile_photo(message.from_user.id)
+        
+        db_firebase.collection("customers").document(user_id).set({
+            "name": user_name,
+            "username": username,
+            "profile_url": profile_url, # លីងរូបភាពភ្ញៀវ
+            "category": "New Customer",
+            "time": firestore.SERVER_TIMESTAMP
+        }, merge=True)
+
+        # ២. បង្កើតផ្ទាំងប៊ូតុងខាងក្រោម (Reply Keyboard)
         reply_keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=2)
         btn_deposit_reply = types.KeyboardButton("💰 ដាក់លុយ")
         btn_admin_reply = types.KeyboardButton("✉️ ឆាតទៅ Admin")
@@ -131,7 +164,7 @@ def start(message):
         reply_keyboard.add(btn_deposit_reply, btn_admin_reply)
         reply_keyboard.add(btn_trial_reply)
 
-        # ២. បង្កើតប៊ូតុងជាប់សារ
+        # ៣. បង្កើតប៊ូតុងជាប់សារ (Inline Keyboard)
         inline_markup = types.InlineKeyboardMarkup(row_width=2)
         btn_admin_inline = types.InlineKeyboardButton("✉️ ឆាតទៅ Admin ↗️", url="https://t.me/Cockstn03TT")
         btn_deposit_inline = types.InlineKeyboardButton("💰 ដាក់លុយ (QR Code)", callback_data="deposit")
@@ -139,22 +172,22 @@ def start(message):
         inline_markup.row(btn_admin_inline, btn_deposit_inline)
         inline_markup.row(btn_trial_inline)
 
-        # ៣. ផ្ញើសារទី១ (ភ្ជាប់ជាមួយប៊ូតុងខាងក្រោម)
+        # ៤. ផ្ញើសារស្វាគមន៍ (បង្ហាញប៊ូតុងខាងក្រោម)
         bot.send_message(
             message.chat.id, 
             f"សួស្ដី {user_name}! 👋\nសូមស្វាគមន៍មកកាន់ STN Play!", 
             reply_markup=reply_keyboard
         )
 
-        # ៤. ផ្ញើសារទី២ (ភ្ជាប់ជាមួយប៊ូតុងជាប់សារ)
+        # ៥. ផ្ញើសារជ្រើសរើសសេវាកម្ម (បង្ហាញប៊ូតុងជាប់សារ)
         bot.send_message(
             message.chat.id, 
             "សូមជ្រើសរើសសេវាកម្ម៖", 
             reply_markup=inline_markup
         )
+        
     except Exception as e:
         print(f"Error in start command: {e}")
-
 # --- មុខងារចាប់ពាក្យពេលភ្ញៀវចុច "ប៊ូតុងជាប់សារ" (Inline Buttons) ---
 @bot.callback_query_handler(func=lambda call: True)
 def handle_query(call):
