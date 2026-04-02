@@ -110,7 +110,7 @@ def listen_for_admin_replies():
     db_firebase.collection("admin_replies").on_snapshot(on_snapshot)
 
 # ==========================================
-# មុខងារ Start & ប៊ូតុងខាងក្រោម ៣ ជម្រើស
+# មុខងារ Start (មានទាំងប៊ូតុងខាងក្រោម និងប៊ូតុងជាប់សារ)
 # ==========================================
 
 @bot.message_handler(commands=['clear'])
@@ -123,24 +123,57 @@ def start(message):
     try:
         user_name = message.from_user.first_name
         
-        # បង្កើតផ្ទាំងប៊ូតុងខាងក្រោម ៣ ជម្រើស (Reply Keyboard)
+        # ១. បង្កើតផ្ទាំងប៊ូតុងខាងក្រោម ៣ ជម្រើស
         reply_keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=2)
-        btn_deposit = types.KeyboardButton("💰 ដាក់លុយ")
-        btn_admin = types.KeyboardButton("✉️ ឆាតទៅ Admin")
-        btn_trial = types.KeyboardButton("🎁 គណនីសាកល្បង")
-        
-        reply_keyboard.add(btn_deposit, btn_admin)
-        reply_keyboard.add(btn_trial)
+        btn_deposit_reply = types.KeyboardButton("💰 ដាក់លុយ")
+        btn_admin_reply = types.KeyboardButton("✉️ ឆាតទៅ Admin")
+        btn_trial_reply = types.KeyboardButton("🎁 គណនីសាកល្បង")
+        reply_keyboard.add(btn_deposit_reply, btn_admin_reply)
+        reply_keyboard.add(btn_trial_reply)
 
+        # ២. បង្កើតប៊ូតុងជាប់សារ
+        inline_markup = types.InlineKeyboardMarkup(row_width=2)
+        btn_admin_inline = types.InlineKeyboardButton("✉️ ឆាតទៅ Admin ↗️", url="https://t.me/Cockstn03TT")
+        btn_deposit_inline = types.InlineKeyboardButton("💰 ដាក់លុយ (QR Code)", callback_data="deposit")
+        btn_trial_inline = types.InlineKeyboardButton("🎁 គណនីសាកល្បង", callback_data="trial")
+        inline_markup.row(btn_admin_inline, btn_deposit_inline)
+        inline_markup.row(btn_trial_inline)
+
+        # ៣. ផ្ញើសារទី១ (ភ្ជាប់ជាមួយប៊ូតុងខាងក្រោម)
         bot.send_message(
             message.chat.id, 
-            f"សួស្ដី {user_name}! 👋\nសូមស្វាគមន៍មកកាន់ STN Play!\n\n👇 សូមជ្រើសរើសសេវាកម្មនៅខាងក្រោម៖", 
+            f"សួស្ដី {user_name}! 👋\nសូមស្វាគមន៍មកកាន់ STN Play!", 
             reply_markup=reply_keyboard
+        )
+
+        # ៤. ផ្ញើសារទី២ (ភ្ជាប់ជាមួយប៊ូតុងជាប់សារ)
+        bot.send_message(
+            message.chat.id, 
+            "សូមជ្រើសរើសសេវាកម្ម៖", 
+            reply_markup=inline_markup
         )
     except Exception as e:
         print(f"Error in start command: {e}")
 
-# --- មុខងារចាប់ពាក្យពេលភ្ញៀវចុចប៊ូតុងខាងក្រោម ---
+# --- មុខងារចាប់ពាក្យពេលភ្ញៀវចុច "ប៊ូតុងជាប់សារ" (Inline Buttons) ---
+@bot.callback_query_handler(func=lambda call: True)
+def handle_query(call):
+    user_id = str(call.from_user.id)
+    first_name = call.from_user.first_name
+    category = "Target (Deposit)" if call.data == "deposit" else "Non-Target (Trial)"
+    
+    bot.answer_callback_query(call.id)
+    if call.data == "deposit":
+        bot.send_message(call.message.chat.id, "🏦 សូមផ្ញើសារទៅ Admin ដើម្បីទទួល QR Code ផ្លូវការ។")
+    elif call.data == "trial":
+        bot.send_message(call.message.chat.id, f"🎁 គណនីសាកល្បង៖\n{random.choice(TRIAL_ACCOUNTS)}")
+
+    db_firebase.collection("customers").document(user_id).set({
+        "name": first_name, "username": call.from_user.username, "category": category, "time": firestore.SERVER_TIMESTAMP
+    })
+    bot.send_message(ADMIN_ID, f"🔔 *អតិថិជនថ្មី (ចុចប៊ូតុងជាប់សារ)!*\nឈ្មោះ: {first_name}\nប្រភេទ: {category}\n🔗 [ឆាត](tg://user?id={user_id})", parse_mode="Markdown")
+
+# --- មុខងារចាប់ពាក្យពេលភ្ញៀវចុច "ប៊ូតុងខាងក្រោម" (Reply Buttons) ---
 @bot.message_handler(func=lambda message: message.text in ["💰 ដាក់លុយ", "✉️ ឆាតទៅ Admin", "🎁 គណនីសាកល្បង"])
 def handle_bottom_buttons(message):
     user_id = str(message.chat.id)
@@ -158,15 +191,14 @@ def handle_bottom_buttons(message):
     elif text == "🎁 គណនីសាកល្បង":
         bot.send_message(message.chat.id, f"🎁 គណនីសាកល្បង៖\n{random.choice(TRIAL_ACCOUNTS)}")
 
-    # កត់ត្រាអតិថិជនចូលទៅក្នុង Firebase និងលោតដំណឹងទៅ Admin
     db_firebase.collection("customers").document(user_id).set({
         "name": first_name, "username": message.from_user.username, "category": category, "time": firestore.SERVER_TIMESTAMP
     })
     bot.send_message(ADMIN_ID, f"🔔 *អតិថិជនចុចប៊ូតុងខាងក្រោម!*\nឈ្មោះ: {first_name}\nសេវាកម្ម: {text}\n🔗 [ឆាត](tg://user?id={user_id})", parse_mode="Markdown")
 
+# --- មុខងារកត់ត្រាសារចូល Dashboard ---
 @bot.message_handler(content_types=['text', 'photo', 'video', 'voice'])
 def log_messages(message):
-    # ការពារកុំឱ្យពេលភ្ញៀវចុចប៊ូតុង វាលោតសារចូលទៅក្នុងប្រអប់ Chat ក្នុង Dashboard នាំឱ្យរញ៉េរញ៉ៃ
     if message.text in ["💰 ដាក់លុយ", "✉️ ឆាតទៅ Admin", "🎁 គណនីសាកល្បង"]:
         return
 
