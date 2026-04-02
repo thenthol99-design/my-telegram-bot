@@ -119,9 +119,10 @@ def listen_for_admin_replies():
 def start(message):
     user_name = message.from_user.first_name
     
-    # ១. កូដសម្រាប់បញ្ជាឱ្យ Telegram លុបប៊ូតុងខាងក្រោមចោល
+    # ១. បង្កើតបញ្ជាលុបប៊ូតុងចាស់ (ReplyKeyboardRemove)
     remove_keyboard = types.ReplyKeyboardRemove()
     
+    # ២. បង្កើតប៊ូតុង Inline ជាប់សារ
     inline_markup = types.InlineKeyboardMarkup(row_width=2)
     btn_admin = types.InlineKeyboardButton("✉️ ឆាតទៅ Admin ↗️", url="https://t.me/Cockstn03TT")
     btn_deposit = types.InlineKeyboardButton("💰 ដាក់លុយ (QR Code)", callback_data="deposit")
@@ -129,8 +130,27 @@ def start(message):
     inline_markup.row(btn_admin, btn_deposit)
     inline_markup.row(btn_trial)
 
-    bot.send_message(message.chat.id, f"សួស្ដី {user_name}! 👋\nសូមស្វាគមន៍មកកាន់ STN Play!", reply_markup=reply_markup)
-    bot.send_message(message.chat.id, "សូមជ្រើសរើសសេវាកម្ម៖", reply_markup=inline_markup)
+    # ៣. ផ្ញើសារស្វាគមន៍ (កែត្រង់នេះ៖ ប្រើ remove_keyboard ដើម្បីឱ្យប៊ូតុងខាងក្រោមបាត់)
+    bot.send_message(
+        message.chat.id, 
+        f"សួស្ដី {user_name}! 👋\nសូមស្វាគមន៍មកកាន់ STN Play!", 
+        reply_markup=remove_keyboard # កែពី reply_markup មកជា remove_keyboard
+    )
+    
+    bot.send_message(
+        message.chat.id, 
+        "សូមជ្រើសរើសសេវាកម្ម៖", 
+        reply_markup=inline_markup
+    )
+
+# --- មុខងារបង្ខំលុប (បន្ថែមទុកសម្រាប់ករណីប៊ូតុងនៅរឹងក្បាល) ---
+@bot.message_handler(commands=['clear'])
+def clear_keyboard(message):
+    bot.send_message(
+        message.chat.id, 
+        "🧹 បោសសម្អាតប៊ូតុងរួចរាល់!", 
+        reply_markup=types.ReplyKeyboardRemove()
+    )
 
 @bot.callback_query_handler(func=lambda call: True)
 def handle_query(call):
