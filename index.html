@@ -188,8 +188,9 @@
                 await signInWithEmailAndPassword(auth, email, password);
                 errorMsg.classList.add('hidden');
             } catch (error) {
-                errorMsg.innerText = "❌ Email ឬ Password មិនត្រឹមត្រូវទេ!";
+                errorMsg.innerText = "❌ បញ្ហា: " + error.code; // <--- កែតែមួយជួរនេះទេ
                 errorMsg.classList.remove('hidden');
+                console.error("ពត៌មានលំអិតពីកំហុស:", error);
             }
             btn.disabled = false;
             btn.innerText = "ចូលប្រព័ន្ធ (Login)";
