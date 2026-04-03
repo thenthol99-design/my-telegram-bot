@@ -95,9 +95,9 @@
         </div>
     </div>
 
-    <script type="module">
+<script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-        import { getFirestore, collection, onSnapshot, addDoc, serverTimestamp, query, where, orderBy, doc, deleteDoc, getDoc, limit } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+        import { getFirestore, collection, onSnapshot, addDoc, serverTimestamp, query, where, orderBy, doc, deleteDoc, limit } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
         import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-storage.js";
 
         const firebaseConfig = {
@@ -130,12 +130,10 @@
                 const u = userDoc.data();
                 const id = userDoc.id;
 
-                // Avatar ក្នុង Sidebar
                 const avatarImg = u.profile_url 
                     ? `<img src="${u.profile_url}" class="w-10 h-10 rounded-full object-cover shadow-sm border border-slate-200">`
                     : `<div class="w-10 h-10 bg-gradient-to-tr from-blue-600 to-blue-400 rounded-full flex items-center justify-center text-white text-sm font-bold shadow-sm">${u.name ? u.name[0] : '?'}</div>`;
 
-                // បញ្ជីអតិថិជនសរុប (ក្រោម Broadcast)
                 list.innerHTML += `<div class="p-3 border-b flex justify-between items-center text-xs">
                     <div class="flex items-center gap-2">
                         <span class="font-bold text-slate-700">${u.name}</span>
@@ -143,7 +141,6 @@
                     <button onclick="deleteUser('${id}')" class="text-red-300 hover:text-red-500 transition-colors"><i class="fas fa-trash"></i></button>
                 </div>`;
                 
-                // បញ្ជី Inbox
                 const btn = document.createElement('div');
                 btn.className = `p-4 border-b cursor-pointer hover:bg-white transition-all flex items-center gap-3 ${activeId === id ? 'bg-white border-l-4 border-l-blue-600 shadow-sm' : ''}`;
                 btn.innerHTML = `
@@ -157,11 +154,10 @@
             });
         });
 
-        // ២. មុខងារជ្រើសរើសភ្ញៀវ និងបង្ហាញសារឆាត
+        // ២. មុខងារជ្រើសរើសភ្ញៀវ និងបង្ហាញសារឆាត (នេះហើយកន្លែងដែលអ្នកច្រឡំលុបមុននេះ!)
         window.selectUser = async function(id, name, pUrl) {
             activeId = id;
             
-            // បង្ហាញ Header ជាមួយរូបភ្ញៀវ
             const headerAvatar = pUrl 
                 ? `<img src="${pUrl}" class="w-8 h-8 rounded-full object-cover">`
                 : `<div class="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white text-xs font-bold">${name[0]}</div>`;
@@ -187,13 +183,13 @@
                     const isMe = m.sender === 'admin';
                     let media = "";
                     
+                    // កូដដែលយើងទើបកែសម្រួលដើម្បីកុំឱ្យវីដេអូចេញលេខ ០
                     if (m.media_url) {
                         if (m.media_type === 'photo') {
                             media = `<img src="${m.media_url}" class="rounded-xl shadow-sm mb-1 border border-slate-100" onclick="window.open('${m.media_url}')">`;
                         } else if (m.media_type === 'video') {
-                            // បានបន្ថែម preload="none" និង max-w-full
                             media = `<video src="${m.media_url}" controls preload="none" class="w-[200px] sm:w-[250px] h-[150px] object-cover rounded-xl shadow-sm mb-1 border border-slate-100 bg-slate-800"></video>`;
-                            // បានបន្ថែម preload="none" និងកែទំហំ w-full
+                        } else if (m.media_type === 'voice' || m.media_type === 'audio') {
                             media = `
                                 <div class="bg-slate-50 p-2 rounded-lg border border-slate-100 mb-1">
                                     <audio controls preload="none" class="h-10 w-[200px] sm:w-[240px]">
@@ -204,7 +200,6 @@
                         }
                     }
 
-                    // Avatar តូចក្នុងប្រអប់ឆាតសម្រាប់ភ្ញៀវ
                     const chatAvatar = !isMe ? (pUrl 
                         ? `<img src="${pUrl}" class="w-7 h-7 rounded-full object-cover mt-auto">`
                         : `<div class="w-7 h-7 bg-slate-300 rounded-full flex items-center justify-center text-white text-[10px] font-bold mt-auto">${name[0]}</div>`) : '';
