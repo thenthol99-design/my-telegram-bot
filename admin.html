@@ -135,9 +135,11 @@
         // ថែមការទាញយកមុខងារ Auth ពី Firebase
         import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 
-        const isStaging =
-  window.location.hostname.includes("github.io") ||
-  window.location.hostname.includes("staging");
+const host = window.location.hostname;
+const isStaging =
+  host.includes("github.io") ||
+  host.includes("staging") ||
+  window.location.search.includes("env=staging");
 
 const firebaseConfig = isStaging
   ? {
