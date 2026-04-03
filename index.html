@@ -192,12 +192,11 @@
                             media = `<img src="${m.media_url}" class="rounded-xl shadow-sm mb-1 border border-slate-100" onclick="window.open('${m.media_url}')">`;
                         } else if (m.media_type === 'video') {
                             // បានបន្ថែម preload="none" និង max-w-full
-                            media = `<video src="${m.media_url}" controls preload="none" class="rounded-xl shadow-sm mb-1 border border-slate-100 max-w-full"></video>`;
-                        } else if (m.media_type === 'voice' || m.media_type === 'audio') {
+                            media = `<video src="${m.media_url}" controls preload="none" class="w-[200px] sm:w-[250px] h-[150px] object-cover rounded-xl shadow-sm mb-1 border border-slate-100 bg-slate-800"></video>`;
                             // បានបន្ថែម preload="none" និងកែទំហំ w-full
                             media = `
-                                <div class="bg-slate-50 p-2 rounded-lg border border-slate-100 mb-1 max-w-full">
-                                    <audio controls preload="none" class="h-8 w-full">
+                                <div class="bg-slate-50 p-2 rounded-lg border border-slate-100 mb-1">
+                                    <audio controls preload="none" class="h-10 w-[200px] sm:w-[240px]">
                                         <source src="${m.media_url}" type="audio/ogg">
                                         <source src="${m.media_url}" type="audio/mpeg">
                                     </audio>
