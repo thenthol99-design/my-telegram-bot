@@ -18,8 +18,12 @@ ADMIN_ID = 5663812084
 
 bot = telebot.TeleBot(API_TOKEN)
 
-# 👉 កន្លែងសំខាន់ទី១៖ ដាក់លេខ UID ម្ចាស់គណនី (Admin) នៅទីនេះ
-OWNER_UID = "zKqZ1Nu3dVX1rnLhUnOyvNOmWG33"
+# 👉 កន្លែងសំខាន់ទី១៖ លេខ UID ម្ចាស់គណនី (កុំភ្លេចដូរដាក់លេខពិតប្រាកដរបស់បង)
+OWNER_UID = "លេខ_UID_របស់បង_នៅទីនេះ"
+
+# 👉 កន្លែងសំខាន់ទី២៖ ប្រភេទ Bot (កំណត់ថា Bot នេះជា Bot អ្វី)
+# ជម្រើសមានដូចជា: "stn_bot", "shop_bot", "game_bot" (ត្រូវឱ្យដូចនឹង value ក្នុង HTML)
+BOT_TYPE = "stn_bot" 
 
 # --- តភ្ជាប់ Google Firebase ---
 if FIREBASE_CONFIG:
@@ -36,15 +40,7 @@ if FIREBASE_CONFIG:
 # --- បញ្ជីគណនីសាកល្បង ---
 TRIAL_ACCOUNTS = [
     "👉 Username: cfrmlltt001 \n🔑 Password: 123456",
-    "👉 Username: cfrmlltt002 \n🔑 Password: 123457",
-    "👉 Username: cfrmlltt003 \n🔑 Password: 123458",
-    "👉 Username: cfrmlltt004 \n🔑 Password: 123459",
-    "👉 Username: cfrmlltt005 \n🔑 Password: 1234510",
-    "👉 Username: cfrmlltt006 \n🔑 Password: 1234511",
-    "👉 Username: cfrmlltt007 \n🔑 Password: 1234512",
-    "👉 Username: cfrmlltt008 \n🔑 Password: 1234513",
-    "👉 Username: cfrmlltt009 \n🔑 Password: 1234514",
-    "👉 Username: cfrmlltt010 \n🔑 Password: 1234515"
+    "👉 Username: cfrmlltt002 \n🔑 Password: 123457"
 ]
 
 # --- មុខងារ Upload Media ---
@@ -72,8 +68,8 @@ def upload_telegram_file(message, file_type):
 
 # --- មុខងារផ្ញើសារបណ្ដាក់គ្នា ---
 def process_staggered_broadcast(message_text, target_cat, media_url, media_type, delay_seconds):
-    # 👉 កន្លែងទី២៖ ទាញយកតែអតិថិជនរបស់ Bot នេះប៉ុណ្ណោះ
-    customers = db_firebase.collection("customers").where("owner_uid", "==", OWNER_UID).stream()
+    # 👉 ថែម BOT_TYPE នៅទីនេះ ដើម្បីឱ្យវាផ្ញើត្រូវតែភ្ញៀវរបស់ Bot នេះ
+    customers = db_firebase.collection("customers").where("owner_uid", "==", OWNER_UID).where("bot_type", "==", BOT_TYPE).stream()
     count = 0
     for customer in customers:
         c_data = customer.to_dict()
@@ -124,11 +120,11 @@ def listen_for_admin_replies():
                     
                 db_firebase.collection("admin_replies").document(change.document.id).delete()
     
-    # 👉 កន្លែងទី៣៖ រង់ចាំទទួលសារពី Dashboard ដែលត្រូវនឹង UID ម្ចាស់វាប៉ុណ្ណោះ
-    db_firebase.collection("admin_replies").where("owner_uid", "==", OWNER_UID).on_snapshot(on_snapshot)
+    # 👉 ថែម BOT_TYPE នៅទីនេះ ដើម្បីស្តាប់តែសារដែល Admin ផ្ញើមកកាន់ Bot នេះប៉ុណ្ណោះ
+    db_firebase.collection("admin_replies").where("owner_uid", "==", OWNER_UID).where("bot_type", "==", BOT_TYPE).on_snapshot(on_snapshot)
 
 # ==========================================
-# មុខងារ Start (មានទាំងប៊ូតុងខាងក្រោម និងប៊ូតុងជាប់សារ)
+# មុខងារ Start
 # ==========================================
 
 @bot.message_handler(commands=['clear'])
@@ -160,9 +156,10 @@ def start(message):
         username = message.from_user.username
         profile_url = get_user_profile_photo(message.from_user.id)
         
-        # 👉 កន្លែងទី៤៖ ថែម owner_uid ពេលចុះឈ្មោះភ្ញៀវដំបូង
+        # 👉 ថែម BOT_TYPE នៅទីនេះ ពេលចុះឈ្មោះភ្ញៀវថ្មី
         db_firebase.collection("customers").document(user_id).set({
             "owner_uid": OWNER_UID,
+            "bot_type": BOT_TYPE,
             "name": user_name,
             "username": username,
             "profile_url": profile_url,
@@ -201,9 +198,10 @@ def handle_query(call):
     elif call.data == "trial":
         bot.send_message(call.message.chat.id, f"🎁 គណនីសាកល្បង៖\n{random.choice(TRIAL_ACCOUNTS)}")
 
-    # 👉 កន្លែងទី៥៖ ថែម owner_uid ពេលភ្ញៀវចុចប៊ូតុង
+    # 👉 ថែម BOT_TYPE នៅទីនេះ
     db_firebase.collection("customers").document(user_id).set({
         "owner_uid": OWNER_UID,
+        "bot_type": BOT_TYPE,
         "name": first_name, "username": call.from_user.username, "category": category, "time": firestore.SERVER_TIMESTAMP
     }, merge=True)
     bot.send_message(ADMIN_ID, f"🔔 *អតិថិជនថ្មី (ចុចប៊ូតុងជាប់សារ)!*\nឈ្មោះ: {first_name}\nប្រភេទ: {category}\n🔗 [ឆាត](tg://user?id={user_id})", parse_mode="Markdown")
@@ -225,9 +223,10 @@ def handle_bottom_buttons(message):
     elif text == "🎁 គណនីសាកល្បង":
         bot.send_message(message.chat.id, f"🎁 គណនីសាកល្បង៖\n{random.choice(TRIAL_ACCOUNTS)}")
 
-    # 👉 កន្លែងទី៦៖ ថែម owner_uid ពេលភ្ញៀវចុចប៊ូតុងខាងក្រោម
+    # 👉 ថែម BOT_TYPE នៅទីនេះ
     db_firebase.collection("customers").document(user_id).set({
         "owner_uid": OWNER_UID,
+        "bot_type": BOT_TYPE,
         "name": first_name, "username": message.from_user.username, "category": category, "time": firestore.SERVER_TIMESTAMP
     }, merge=True)
     bot.send_message(ADMIN_ID, f"🔔 *អតិថិជនចុចប៊ូតុងខាងក្រោម!*\nឈ្មោះ: {first_name}\nសេវាកម្ម: {text}\n🔗 [ឆាត](tg://user?id={user_id})", parse_mode="Markdown")
@@ -245,9 +244,10 @@ def log_messages(message):
     if message.content_type in ['photo', 'video', 'voice']:
         m_url, m_type = upload_telegram_file(message, message.content_type)
 
-    # 👉 កន្លែងទី៧៖ ថែម owner_uid ពេលភ្ញៀវផ្ញើសារមកធម្មតា
+    # 👉 ថែម BOT_TYPE នៅទីនេះ
     db_firebase.collection("chats").add({
         "owner_uid": OWNER_UID,
+        "bot_type": BOT_TYPE,
         "chat_id": user_id, "name": name, "text": text,
         "media_url": m_url, "media_type": m_type,
         "sender": "user", "timestamp": firestore.SERVER_TIMESTAMP
@@ -261,8 +261,8 @@ def listen_broadcasts():
                 threading.Thread(target=process_staggered_broadcast, args=(d.get('message',''), d.get('target_category','All'), d.get('media_url',''), d.get('media_type','none'), int(d.get('delay_seconds',0))), daemon=True).start()
                 db_firebase.collection("broadcasts").document(change.document.id).delete()
     
-    # 👉 កន្លែងទី៨៖ រង់ចាំទទួលបញ្ជា Broadcast ពីម្ចាស់វាប៉ុណ្ណោះ
-    db_firebase.collection("broadcasts").where("owner_uid", "==", OWNER_UID).on_snapshot(on_snapshot)
+    # 👉 ថែម BOT_TYPE នៅទីនេះ ដើម្បីស្តាប់តែបញ្ជា Broadcast របស់ Bot នេះប៉ុណ្ណោះ
+    db_firebase.collection("broadcasts").where("owner_uid", "==", OWNER_UID).where("bot_type", "==", BOT_TYPE).on_snapshot(on_snapshot)
 
 threading.Thread(target=listen_broadcasts, daemon=True).start()
 threading.Thread(target=listen_for_admin_replies, daemon=True).start()
