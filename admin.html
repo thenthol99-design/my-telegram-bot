@@ -149,6 +149,9 @@
         const storage = getStorage(app);
         const auth = getAuth(app); // បង្កើតអនុគមន៍ Auth
 
+        // 👇 ទីតាំងទី១៖ ថែមអញ្ញាតថ្មីនៅត្រង់នេះ 👇
+        let currentUserUid = null; 
+
         let activeId = null;
         let unsubscribeChat = null;
         let unsubscribeCustomers = null;
@@ -156,15 +159,15 @@
         let audioChunks = [];
         let isRecording = false;
 
-        // មុខងារពិនិត្យមើលថាតើ Admin បាន Login ហើយឬនៅ?
+        // 👇 ទីតាំងទី២៖ កែកន្លែង Login (onAuthStateChanged) 👇
         onAuthStateChanged(auth, (user) => {
             if (user) {
-                // បើ Login ត្រូវ ឱ្យលាក់ផ្ទាំង Login ហើយបង្ហាញ Dashboard
+                currentUserUid = user.uid; // កត់ត្រាលេខសម្គាល់ទុកពេលចូល
                 document.getElementById('login-screen').classList.add('hidden');
                 document.getElementById('main-dashboard').classList.remove('hidden');
-                initDashboard(); // ទាញយកទិន្នន័យមកបង្ហាញ
+                initDashboard(); 
             } else {
-                // បើមិនទាន់ Login ឬ Logout ឱ្យបង្ហាញផ្ទាំង Login វិញ
+                currentUserUid = null; // លុបលេខសម្គាល់ចោលពេលចេញ
                 document.getElementById('login-screen').classList.remove('hidden');
                 document.getElementById('main-dashboard').classList.add('hidden');
                 if (unsubscribeCustomers) unsubscribeCustomers();
@@ -205,7 +208,14 @@
 
         // មុខងារទាញយកទិន្នន័យ (ដំណើរការតែពេល Login រួច)
         function initDashboard() {
-            unsubscribeCustomers = onSnapshot(collection(db, "customers"), (snap) => {
+            // ទីតាំងដែលយើងកែ៖ បង្កើតលក្ខខណ្ឌ ទាញយកតែអតិថិជនណាដែលជារបស់ម្ចាស់គណនីនេះ (owner_uid)
+            const qCustomers = query(
+                collection(db, "customers"),
+                where("owner_uid", "==", currentUserUid)
+            );
+
+            // ដូរពី collection(db, "customers") មកប្រើ qCustomers វិញ
+            unsubscribeCustomers = onSnapshot(qCustomers, (snap) => {
                 const list = document.getElementById('customer-list');
                 const sidebar = document.getElementById('chat-sidebar');
                 document.getElementById('user-count-badge').innerText = snap.size + " Users";
@@ -239,7 +249,7 @@
                 });
             });
         }
-
+        
         window.selectUser = async function(id, name, pUrl) {
             activeId = id;
             
@@ -301,7 +311,7 @@
             });
         };
 
-        window.toggleRecording = async function() {
+       window.toggleRecording = async function() {
             if (!activeId) return alert("សូមជ្រើសរើសភ្ញៀវម្នាក់សិន!");
             const micIcon = document.getElementById('mic-icon');
             const micBtn = document.getElementById('mic-btn');
@@ -320,8 +330,9 @@
                         const snapshot = await uploadBytes(storageRef, audioBlob);
                         const mUrl = await getDownloadURL(snapshot.ref);
                         
-                        const msgData = { chat_id: activeId, name: "Admin", text: "", media_url: mUrl, media_type: "voice", sender: "admin", timestamp: serverTimestamp() };
-                        await addDoc(collection(db, "admin_replies"), { chat_id: activeId, text: "", media_url: mUrl, media_type: "voice", timestamp: serverTimestamp() });
+                        // 👉 ថែម owner_uid នៅទីនេះ
+                        const msgData = { chat_id: activeId, name: "Admin", text: "", media_url: mUrl, media_type: "voice", sender: "admin", timestamp: serverTimestamp(), owner_uid: currentUserUid };
+                        await addDoc(collection(db, "admin_replies"), { chat_id: activeId, text: "", media_url: mUrl, media_type: "voice", timestamp: serverTimestamp(), owner_uid: currentUserUid });
                         await addDoc(collection(db, "chats"), msgData);
                         
                         micBtn.innerHTML = '<i class="fas fa-microphone text-xl" id="mic-icon"></i>';
@@ -339,7 +350,7 @@
                 micBtn.classList.remove('recording');
             }
         };
-
+        
         window.sendReply = async function() {
             const input = document.getElementById('chat-input');
             const fileInput = document.getElementById('chat-file');
@@ -358,8 +369,9 @@
                     else if (file.type.includes('audio')) mType = 'voice';
                 }
                 
-                const msgData = { chat_id: activeId, name: "Admin", text: text, media_url: mUrl, media_type: mType, sender: "admin", timestamp: serverTimestamp() };
-                await addDoc(collection(db, "admin_replies"), { chat_id: activeId, text: text, media_url: mUrl, media_type: mType, timestamp: serverTimestamp() });
+                // 👉 ថែម owner_uid នៅទីនេះ
+                const msgData = { chat_id: activeId, name: "Admin", text: text, media_url: mUrl, media_type: mType, sender: "admin", timestamp: serverTimestamp(), owner_uid: currentUserUid };
+                await addDoc(collection(db, "admin_replies"), { chat_id: activeId, text: text, media_url: mUrl, media_type: mType, timestamp: serverTimestamp(), owner_uid: currentUserUid });
                 await addDoc(collection(db, "chats"), msgData);
                 
                 input.value = ''; fileInput.value = '';
@@ -384,7 +396,8 @@
                     else if (file.type.includes('video')) mType = 'video';
                     else if (file.type.includes('audio')) mType = 'voice';
                 }
-                await addDoc(collection(db, "broadcasts"), { message: msg, target_category: target, media_type: mType, media_url: mUrl, delay_seconds: parseInt(delay) || 0, timestamp: serverTimestamp() });
+                // 👉 ថែម owner_uid នៅទីនេះ
+                await addDoc(collection(db, "broadcasts"), { message: msg, target_category: target, media_type: mType, media_url: mUrl, delay_seconds: parseInt(delay) || 0, timestamp: serverTimestamp(), owner_uid: currentUserUid });
                 alert("✅ ការផ្ញើព័ត៌មានត្រូវបានចាប់ផ្ដើម!");
                 document.getElementById('bc-msg').value = '';
                 document.getElementById('bc-file').value = '';
