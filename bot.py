@@ -19,7 +19,7 @@ ADMIN_ID = 5663812084
 bot = telebot.TeleBot(API_TOKEN)
 
 # 👉 កន្លែងសំខាន់ទី១៖ ដាក់លេខ UID ម្ចាស់គណនី (Admin) នៅទីនេះ
-OWNER_UID = "លេខ_UID_របស់បង_នៅទីនេះ"
+OWNER_UID = "WdxLnqJbQYOC9gSHhIGIOtbqvts1"
 
 # --- តភ្ជាប់ Google Firebase ---
 if FIREBASE_CONFIG:
