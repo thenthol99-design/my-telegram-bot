@@ -8,6 +8,8 @@ import threading
 import time
 import random
 import uuid
+import urllib.request
+from io import BytesIO
  
 # --- កំណត់ការកំណត់ ---
 API_TOKEN = os.getenv('API_TOKEN')
@@ -89,6 +91,7 @@ def process_staggered_broadcast(message_text, target_cat, media_url, media_type,
     bot.send_message(ADMIN_ID, f"✅ ការផ្ញើបណ្ដាក់គ្នាទៅភ្ញៀវ {count} នាក់ ចប់សព្វគ្រប់!")
 
 # --- មុខងារ Listen សម្រាប់ Admin ---
+# --- មុខងារ Listen សម្រាប់ Admin ---
 def listen_for_admin_replies():
     def on_snapshot(col_snapshot, changes, read_time):
         for change in changes:
@@ -100,12 +103,28 @@ def listen_for_admin_replies():
                 m_type = data.get('media_type', 'none')
 
                 try:
-                    if m_type == 'photo' and m_url: bot.send_photo(chat_id, m_url, caption=text)
-                    elif m_type == 'video' and m_url: bot.send_video(chat_id, m_url, caption=text)
-                    elif (m_type == 'voice' or m_type == 'audio') and m_url: 
-                        bot.send_voice(chat_id, m_url, caption=text)
-                    elif text: bot.send_message(chat_id, text)
-                except: pass
+                    if m_type == 'photo' and m_url: 
+                        bot.send_photo(chat_id, m_url, caption=text)
+                    elif m_type == 'video' and m_url: 
+                        bot.send_video(chat_id, m_url, caption=text)
+                    elif (m_type == 'voice' or m_type == 'audio') and m_url:
+                        # ១. ទាញយកឯកសារសំឡេងពី Firebase URL មកកាន់ Memory
+                        req = urllib.request.Request(m_url, headers={'User-Agent': 'Mozilla/5.0'})
+                        with urllib.request.urlopen(req) as response:
+                            voice_data = response.read()
+                            
+                        # ២. បង្កើតជា File និម្មិត និងដាក់កន្ទុយ .ogg ដើម្បីឱ្យ Telegram ស្គាល់ជា Voice
+                        voice_file = BytesIO(voice_data)
+                        voice_file.name = "voice.ogg" 
+                        
+                        # ៣. ផ្ញើទៅកាន់អតិថិជន
+                        bot.send_voice(chat_id, voice_file, caption=text)
+                        
+                    elif text: 
+                        bot.send_message(chat_id, text)
+                except Exception as e: 
+                    print(f"Error sending reply: {e}")
+                    
                 db_firebase.collection("admin_replies").document(change.document.id).delete()
     db_firebase.collection("admin_replies").on_snapshot(on_snapshot)
 
