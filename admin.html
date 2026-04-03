@@ -59,7 +59,15 @@
             <h1 class="text-xl md:text-2xl font-black text-slate-800 flex items-center gap-3">
                 <i class="fas fa-shield-check text-blue-600"></i> STN Play Control Center
             </h1>
+            
             <div class="flex items-center gap-4">
+                <select id="bot-selector" onchange="changeBotSelection()" class="bg-slate-50 border border-slate-200 text-slate-700 text-sm rounded-xl focus:ring-blue-500 focus:border-blue-500 block p-2 outline-none font-bold shadow-sm transition-all cursor-pointer">
+                    <option value="all">🌐 គ្រប់ Bot ទាំងអស់</option>
+                    <option value="stn_bot">🤖 STN Play Bot (ធម្មតា)</option>
+                    <option value="shop_bot">🛒 Bot លក់ទំនិញ</option>
+                    <option value="game_bot">🎮 Bot លេងហ្គេម</option>
+                </select>
+
                 <span id="user-count-badge" class="bg-blue-600 text-white px-4 py-1 rounded-full text-xs font-bold shadow-md shadow-blue-200">0 Users</span>
                 <button onclick="handleLogout()" class="text-red-500 hover:text-red-700 font-bold text-sm flex items-center gap-2 bg-red-50 px-3 py-1.5 rounded-lg transition-colors">
                     <i class="fas fa-sign-out-alt"></i> <span class="hidden md:inline">Logout</span>
@@ -132,7 +140,6 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
         import { getFirestore, collection, onSnapshot, addDoc, serverTimestamp, query, where, orderBy, doc, deleteDoc, limit } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
         import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-storage.js";
-        // ថែមការទាញយកមុខងារ Auth ពី Firebase
         import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 
         const firebaseConfig = {
@@ -147,10 +154,10 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
         const storage = getStorage(app);
-        const auth = getAuth(app); // បង្កើតអនុគមន៍ Auth
+        const auth = getAuth(app); 
 
-        // 👇 ទីតាំងទី១៖ ថែមអញ្ញាតថ្មីនៅត្រង់នេះ 👇
-        let currentUserUid = null; 
+        let currentUserUid = null;
+        let currentBotType = "all";
 
         let activeId = null;
         let unsubscribeChat = null;
@@ -159,15 +166,25 @@
         let audioChunks = [];
         let isRecording = false;
 
-        // 👇 ទីតាំងទី២៖ កែកន្លែង Login (onAuthStateChanged) 👇
+        window.changeBotSelection = function() {
+            currentBotType = document.getElementById('bot-selector').value;
+            if (unsubscribeCustomers) unsubscribeCustomers();
+            if (unsubscribeChat) unsubscribeChat();
+            activeId = null;
+            document.getElementById('chat-sidebar').innerHTML = '';
+            document.getElementById('chat-display').innerHTML = '';
+            document.getElementById('chat-header').innerHTML = `<span class="text-slate-400 font-normal italic text-sm">សូមរើសភ្ញៀវម្នាក់ដើម្បីចាប់ផ្ដើមឆាត...</span>`;
+            initDashboard();
+        };
+
         onAuthStateChanged(auth, (user) => {
             if (user) {
-                currentUserUid = user.uid; // កត់ត្រាលេខសម្គាល់ទុកពេលចូល
+                currentUserUid = user.uid; 
                 document.getElementById('login-screen').classList.add('hidden');
                 document.getElementById('main-dashboard').classList.remove('hidden');
                 initDashboard(); 
             } else {
-                currentUserUid = null; // លុបលេខសម្គាល់ចោលពេលចេញ
+                currentUserUid = null; 
                 document.getElementById('login-screen').classList.remove('hidden');
                 document.getElementById('main-dashboard').classList.add('hidden');
                 if (unsubscribeCustomers) unsubscribeCustomers();
@@ -175,7 +192,6 @@
             }
         });
 
-        // មុខងារ Login
         window.handleLogin = async () => {
             const email = document.getElementById('login-email').value;
             const password = document.getElementById('login-password').value;
@@ -191,7 +207,7 @@
                 await signInWithEmailAndPassword(auth, email, password);
                 errorMsg.classList.add('hidden');
             } catch (error) {
-                errorMsg.innerText = "❌ បញ្ហា: " + error.code; // <--- កែតែមួយជួរនេះទេ
+                errorMsg.innerText = "❌ បញ្ហា: " + error.code; 
                 errorMsg.classList.remove('hidden');
                 console.error("ពត៌មានលំអិតពីកំហុស:", error);
             }
@@ -199,22 +215,28 @@
             btn.innerText = "ចូលប្រព័ន្ធ (Login)";
         };
 
-        // មុខងារ Logout
         window.handleLogout = async () => {
             if (confirm("តើអ្នកពិតជាចង់ចាកចេញមែនទេ?")) {
                 await signOut(auth);
             }
         };
 
-        // មុខងារទាញយកទិន្នន័យ (ដំណើរការតែពេល Login រួច)
         function initDashboard() {
-            // ទីតាំងដែលយើងកែ៖ បង្កើតលក្ខខណ្ឌ ទាញយកតែអតិថិជនណាដែលជារបស់ម្ចាស់គណនីនេះ (owner_uid)
-            const qCustomers = query(
-                collection(db, "customers"),
-                where("owner_uid", "==", currentUserUid)
-            );
+            let qCustomers;
+            
+            if (currentBotType === "all") {
+                qCustomers = query(
+                    collection(db, "customers"),
+                    where("owner_uid", "==", currentUserUid)
+                );
+            } else {
+                qCustomers = query(
+                    collection(db, "customers"),
+                    where("owner_uid", "==", currentUserUid),
+                    where("bot_type", "==", currentBotType) 
+                );
+            }
 
-            // ដូរពី collection(db, "customers") មកប្រើ qCustomers វិញ
             unsubscribeCustomers = onSnapshot(qCustomers, (snap) => {
                 const list = document.getElementById('customer-list');
                 const sidebar = document.getElementById('chat-sidebar');
@@ -330,9 +352,9 @@
                         const snapshot = await uploadBytes(storageRef, audioBlob);
                         const mUrl = await getDownloadURL(snapshot.ref);
                         
-                        // 👉 ថែម owner_uid នៅទីនេះ
-                        const msgData = { chat_id: activeId, name: "Admin", text: "", media_url: mUrl, media_type: "voice", sender: "admin", timestamp: serverTimestamp(), owner_uid: currentUserUid };
-                        await addDoc(collection(db, "admin_replies"), { chat_id: activeId, text: "", media_url: mUrl, media_type: "voice", timestamp: serverTimestamp(), owner_uid: currentUserUid });
+                        // 👉 បានបន្ថែម bot_type នៅទីនេះ
+                        const msgData = { chat_id: activeId, name: "Admin", text: "", media_url: mUrl, media_type: "voice", sender: "admin", timestamp: serverTimestamp(), owner_uid: currentUserUid, bot_type: currentBotType };
+                        await addDoc(collection(db, "admin_replies"), { chat_id: activeId, text: "", media_url: mUrl, media_type: "voice", timestamp: serverTimestamp(), owner_uid: currentUserUid, bot_type: currentBotType });
                         await addDoc(collection(db, "chats"), msgData);
                         
                         micBtn.innerHTML = '<i class="fas fa-microphone text-xl" id="mic-icon"></i>';
@@ -369,9 +391,9 @@
                     else if (file.type.includes('audio')) mType = 'voice';
                 }
                 
-                // 👉 ថែម owner_uid នៅទីនេះ
-                const msgData = { chat_id: activeId, name: "Admin", text: text, media_url: mUrl, media_type: mType, sender: "admin", timestamp: serverTimestamp(), owner_uid: currentUserUid };
-                await addDoc(collection(db, "admin_replies"), { chat_id: activeId, text: text, media_url: mUrl, media_type: mType, timestamp: serverTimestamp(), owner_uid: currentUserUid });
+                // 👉 បានបន្ថែម bot_type នៅទីនេះ
+                const msgData = { chat_id: activeId, name: "Admin", text: text, media_url: mUrl, media_type: mType, sender: "admin", timestamp: serverTimestamp(), owner_uid: currentUserUid, bot_type: currentBotType };
+                await addDoc(collection(db, "admin_replies"), { chat_id: activeId, text: text, media_url: mUrl, media_type: mType, timestamp: serverTimestamp(), owner_uid: currentUserUid, bot_type: currentBotType });
                 await addDoc(collection(db, "chats"), msgData);
                 
                 input.value = ''; fileInput.value = '';
@@ -396,8 +418,8 @@
                     else if (file.type.includes('video')) mType = 'video';
                     else if (file.type.includes('audio')) mType = 'voice';
                 }
-                // 👉 ថែម owner_uid នៅទីនេះ
-                await addDoc(collection(db, "broadcasts"), { message: msg, target_category: target, media_type: mType, media_url: mUrl, delay_seconds: parseInt(delay) || 0, timestamp: serverTimestamp(), owner_uid: currentUserUid });
+                // 👉 បានបន្ថែម bot_type នៅទីនេះ
+                await addDoc(collection(db, "broadcasts"), { message: msg, target_category: target, media_type: mType, media_url: mUrl, delay_seconds: parseInt(delay) || 0, timestamp: serverTimestamp(), owner_uid: currentUserUid, bot_type: currentBotType });
                 alert("✅ ការផ្ញើព័ត៌មានត្រូវបានចាប់ផ្ដើម!");
                 document.getElementById('bc-msg').value = '';
                 document.getElementById('bc-file').value = '';
