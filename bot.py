@@ -19,7 +19,7 @@ ADMIN_ID = 5663812084
 bot = telebot.TeleBot(API_TOKEN)
 
 # 👉 កន្លែងសំខាន់ទី១៖ លេខ UID ម្ចាស់គណនី (កុំភ្លេចដូរដាក់លេខពិតប្រាកដរបស់បង)
-OWNER_UID = "លេខ_UID_របស់បង_នៅទីនេះ"
+OWNER_UID = "YAk0TWFRq1VAccAUT4RK0JRQJ9j1"
 
 # 👉 កន្លែងសំខាន់ទី២៖ ប្រភេទ Bot (កំណត់ថា Bot នេះជា Bot អ្វី)
 # ជម្រើសមានដូចជា: "stn_bot", "shop_bot", "game_bot" (ត្រូវឱ្យដូចនឹង value ក្នុង HTML)
