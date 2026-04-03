@@ -357,7 +357,7 @@
                     else if (file.type.includes('video')) mType = 'video';
                     else if (file.type.includes('audio')) mType = 'voice';
                 }
-                
+                 
                 const msgData = { chat_id: activeId, name: "Admin", text: text, media_url: mUrl, media_type: mType, sender: "admin", timestamp: serverTimestamp() };
                 await addDoc(collection(db, "admin_replies"), { chat_id: activeId, text: text, media_url: mUrl, media_type: mType, timestamp: serverTimestamp() });
                 await addDoc(collection(db, "chats"), msgData);
