@@ -138,9 +138,12 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-        import { getFirestore, collection, onSnapshot, addDoc, serverTimestamp, query, where, orderBy, doc, deleteDoc, limit } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+        // ថែមពាក្យ setDoc សម្រាប់រក្សាទុក Token
+        import { getFirestore, collection, onSnapshot, addDoc, serverTimestamp, query, where, orderBy, doc, deleteDoc, limit, setDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
         import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-storage.js";
         import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+        // ថែម Import សម្រាប់ប្រព័ន្ធ Notification
+        import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-messaging.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyBX7ilsfHusMLi1gX3ZYcsdkuhST1p-y_k",
@@ -155,6 +158,8 @@
         const db = getFirestore(app);
         const storage = getStorage(app);
         const auth = getAuth(app); 
+        // បើកមុខងារ Messaging
+        const messaging = getMessaging(app);
 
         let currentUserUid = null;
         let currentBotType = "all";
@@ -165,6 +170,33 @@
         let mediaRecorder;
         let audioChunks = [];
         let isRecording = false;
+
+        // 👉 មុខងារសុំសិទ្ធិលោត Notification ពីទូរស័ព្ទ
+        async function setupNotifications() {
+            try {
+                const permission = await Notification.requestPermission();
+                if (permission === 'granted') {
+                    // ⚠️ កន្លែងត្រូវកែ៖ យក VAPID Key របស់បង មកដាក់ជំនួសអក្សរខាងក្រោមនេះ ⚠️
+                    const token = await getToken(messaging, { vapidKey: 'BEmOM7hNEhEcC-wHg5mllypTjNQT-a6A3TVZ89EB4KW3fvuAd8SZ42FCQR48lLIPk5XDD-g8bvoAieSf1tJ9KEU' });
+                    if (token) {
+                        // រក្សាទុក Token ដើម្បីឱ្យ Python ស្គាល់ទូរស័ព្ទបង
+                        await setDoc(doc(db, "admin_tokens", currentUserUid), {
+                            token: token,
+                            owner_uid: currentUserUid,
+                            timestamp: serverTimestamp()
+                        }, { merge: true });
+                        console.log("✅ ភ្ជាប់ Notification ជោគជ័យ!");
+                    }
+                }
+            } catch (err) {
+                console.error('❌ បរាជ័យក្នុងការភ្ជាប់ Notification: ', err);
+            }
+        }
+
+        // 👉 មុខងារពេលបងកំពុងបើកមើល Dashboard ចំពេលភ្ញៀវឆាតមក
+        onMessage(messaging, (payload) => {
+            console.log('📩 មានសារថ្មី: ', payload);
+        });
 
         window.changeBotSelection = function() {
             currentBotType = document.getElementById('bot-selector').value;
@@ -183,6 +215,7 @@
                 document.getElementById('login-screen').classList.add('hidden');
                 document.getElementById('main-dashboard').classList.remove('hidden');
                 initDashboard(); 
+                setupNotifications(); // 👈 ហៅមុខងារសុំសិទ្ធិ Notification ពេល Login រួច
             } else {
                 currentUserUid = null; 
                 document.getElementById('login-screen').classList.remove('hidden');
@@ -199,9 +232,7 @@
             const btn = document.getElementById('login-btn');
             
             if (!email || !password) return;
-            
-            btn.disabled = true;
-            btn.innerText = "កំពុងផ្ទៀងផ្ទាត់...";
+            btn.disabled = true; btn.innerText = "កំពុងផ្ទៀងផ្ទាត់...";
             
             try {
                 await signInWithEmailAndPassword(auth, email, password);
@@ -209,32 +240,18 @@
             } catch (error) {
                 errorMsg.innerText = "❌ បញ្ហា: " + error.code; 
                 errorMsg.classList.remove('hidden');
-                console.error("ពត៌មានលំអិតពីកំហុស:", error);
             }
-            btn.disabled = false;
-            btn.innerText = "ចូលប្រព័ន្ធ (Login)";
+            btn.disabled = false; btn.innerText = "ចូលប្រព័ន្ធ (Login)";
         };
 
-        window.handleLogout = async () => {
-            if (confirm("តើអ្នកពិតជាចង់ចាកចេញមែនទេ?")) {
-                await signOut(auth);
-            }
-        };
+        window.handleLogout = async () => { if (confirm("តើអ្នកពិតជាចង់ចាកចេញមែនទេ?")) await signOut(auth); };
 
         function initDashboard() {
             let qCustomers;
-            
             if (currentBotType === "all") {
-                qCustomers = query(
-                    collection(db, "customers"),
-                    where("owner_uid", "==", currentUserUid)
-                );
+                qCustomers = query(collection(db, "customers"), where("owner_uid", "==", currentUserUid));
             } else {
-                qCustomers = query(
-                    collection(db, "customers"),
-                    where("owner_uid", "==", currentUserUid),
-                    where("bot_type", "==", currentBotType) 
-                );
+                qCustomers = query(collection(db, "customers"), where("owner_uid", "==", currentUserUid), where("bot_type", "==", currentBotType));
             }
 
             unsubscribeCustomers = onSnapshot(qCustomers, (snap) => {
@@ -246,26 +263,16 @@
                 snap.forEach(userDoc => {
                     const u = userDoc.data();
                     const id = userDoc.id;
-
-                    const avatarImg = u.profile_url 
-                        ? `<img src="${u.profile_url}" class="w-10 h-10 rounded-full object-cover shadow-sm border border-slate-200">`
-                        : `<div class="w-10 h-10 bg-gradient-to-tr from-blue-600 to-blue-400 rounded-full flex items-center justify-center text-white text-sm font-bold shadow-sm">${u.name ? u.name[0] : '?'}</div>`;
+                    const avatarImg = u.profile_url ? `<img src="${u.profile_url}" class="w-10 h-10 rounded-full object-cover shadow-sm border border-slate-200">` : `<div class="w-10 h-10 bg-gradient-to-tr from-blue-600 to-blue-400 rounded-full flex items-center justify-center text-white text-sm font-bold shadow-sm">${u.name ? u.name[0] : '?'}</div>`;
 
                     list.innerHTML += `<div class="p-3 border-b flex justify-between items-center text-xs">
-                        <div class="flex items-center gap-2">
-                            <span class="font-bold text-slate-700">${u.name}</span>
-                        </div>
+                        <div class="flex items-center gap-2"><span class="font-bold text-slate-700">${u.name}</span></div>
                         <button onclick="deleteUser('${id}')" class="text-red-300 hover:text-red-500 transition-colors"><i class="fas fa-trash"></i></button>
                     </div>`;
                     
                     const btn = document.createElement('div');
                     btn.className = `p-4 border-b cursor-pointer hover:bg-white transition-all flex items-center gap-3 ${activeId === id ? 'bg-white border-l-4 border-l-blue-600 shadow-sm' : ''}`;
-                    btn.innerHTML = `
-                        ${avatarImg}
-                        <div class="flex-1 min-w-0">
-                            <div class="text-sm font-bold text-slate-800 truncate">${u.name}</div>
-                            <div class="text-[10px] text-gray-400">${u.category || 'General'}</div>
-                        </div>`;
+                    btn.innerHTML = `${avatarImg}<div class="flex-1 min-w-0"><div class="text-sm font-bold text-slate-800 truncate">${u.name}</div><div class="text-[10px] text-gray-400">${u.category || 'General'}</div></div>`;
                     btn.onclick = () => selectUser(id, u.name, u.profile_url);
                     sidebar.appendChild(btn);
                 });
@@ -274,60 +281,25 @@
         
         window.selectUser = async function(id, name, pUrl) {
             activeId = id;
-            
-            const headerAvatar = pUrl 
-                ? `<img src="${pUrl}" class="w-8 h-8 rounded-full object-cover">`
-                : `<div class="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white text-xs font-bold">${name[0]}</div>`;
-            
-            document.getElementById('chat-header').innerHTML = `
-                <div class="flex items-center gap-3">
-                    ${headerAvatar}
-                    <div>
-                        <div class="text-slate-800">${name}</div>
-                        <div class="text-[10px] text-green-500 font-normal">Active Now</div>
-                    </div>
-                </div>`;
+            const headerAvatar = pUrl ? `<img src="${pUrl}" class="w-8 h-8 rounded-full object-cover">` : `<div class="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white text-xs font-bold">${name[0]}</div>`;
+            document.getElementById('chat-header').innerHTML = `<div class="flex items-center gap-3">${headerAvatar}<div><div class="text-slate-800">${name}</div><div class="text-[10px] text-green-500 font-normal">Active Now</div></div></div>`;
              
             if (unsubscribeChat) unsubscribeChat();
-
             const q = query(collection(db, "chats"), where("chat_id", "==", id), orderBy("timestamp", "asc"), limit(50));
             unsubscribeChat = onSnapshot(q, (snap) => {
                 const display = document.getElementById('chat-display');
                 display.innerHTML = '';
-                
                 snap.forEach(msgDoc => {
                     const m = msgDoc.data();
                     const isMe = m.sender === 'admin';
                     let media = "";
-                    
                     if (m.media_url) {
-                        if (m.media_type === 'photo') {
-                            media = `<img src="${m.media_url}" class="rounded-xl shadow-sm mb-1 border border-slate-100" onclick="window.open('${m.media_url}')">`;
-                        } else if (m.media_type === 'video') {
-                            media = `<video src="${m.media_url}" controls preload="none" class="w-[200px] sm:w-[250px] h-[150px] object-cover rounded-xl shadow-sm mb-1 border border-slate-100 bg-slate-800"></video>`;
-                        } else if (m.media_type === 'voice' || m.media_type === 'audio') {
-                            media = `
-                                <div class="bg-slate-50 p-2 rounded-lg border border-slate-100 mb-1">
-                                    <audio controls preload="none" class="h-10 w-[200px] sm:w-[240px]">
-                                        <source src="${m.media_url}" type="audio/ogg">
-                                        <source src="${m.media_url}" type="audio/mpeg">
-                                    </audio>
-                                </div>`;
-                        }
+                        if (m.media_type === 'photo') media = `<img src="${m.media_url}" class="rounded-xl shadow-sm mb-1 border border-slate-100" onclick="window.open('${m.media_url}')">`;
+                        else if (m.media_type === 'video') media = `<video src="${m.media_url}" controls preload="none" class="w-[200px] sm:w-[250px] h-[150px] object-cover rounded-xl shadow-sm mb-1 border border-slate-100 bg-slate-800"></video>`;
+                        else if (m.media_type === 'voice' || m.media_type === 'audio') media = `<div class="bg-slate-50 p-2 rounded-lg border border-slate-100 mb-1"><audio controls preload="none" class="h-10 w-[200px] sm:w-[240px]"><source src="${m.media_url}" type="audio/ogg"><source src="${m.media_url}" type="audio/mpeg"></audio></div>`;
                     }
-
-                    const chatAvatar = !isMe ? (pUrl 
-                        ? `<img src="${pUrl}" class="w-7 h-7 rounded-full object-cover mt-auto">`
-                        : `<div class="w-7 h-7 bg-slate-300 rounded-full flex items-center justify-center text-white text-[10px] font-bold mt-auto">${name[0]}</div>`) : '';
-
-                    display.innerHTML += `
-                        <div class="flex ${isMe ? 'justify-end' : 'justify-start'} w-full gap-2">
-                            ${chatAvatar}
-                            <div class="p-3 max-w-[80%] rounded-2xl text-sm ${isMe ? 'chat-bubble-admin shadow-blue-200' : 'chat-bubble-user shadow-sm'}">
-                                ${media} 
-                                ${m.text ? `<div class="break-words">${m.text}</div>` : ""}
-                            </div>
-                        </div>`;
+                    const chatAvatar = !isMe ? (pUrl ? `<img src="${pUrl}" class="w-7 h-7 rounded-full object-cover mt-auto">` : `<div class="w-7 h-7 bg-slate-300 rounded-full flex items-center justify-center text-white text-[10px] font-bold mt-auto">${name[0]}</div>`) : '';
+                    display.innerHTML += `<div class="flex ${isMe ? 'justify-end' : 'justify-start'} w-full gap-2">${chatAvatar}<div class="p-3 max-w-[80%] rounded-2xl text-sm ${isMe ? 'chat-bubble-admin shadow-blue-200' : 'chat-bubble-user shadow-sm'}">${media} ${m.text ? `<div class="break-words">${m.text}</div>` : ""}</div></div>`;
                 });
                 display.scrollTop = display.scrollHeight;
             });
@@ -337,7 +309,6 @@
             if (!activeId) return alert("សូមជ្រើសរើសភ្ញៀវម្នាក់សិន!");
             const micIcon = document.getElementById('mic-icon');
             const micBtn = document.getElementById('mic-btn');
-
             if (!isRecording) {
                 try {
                     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -351,25 +322,17 @@
                         micBtn.innerHTML = '<i class="fas fa-spinner fa-spin text-blue-600"></i>';
                         const snapshot = await uploadBytes(storageRef, audioBlob);
                         const mUrl = await getDownloadURL(snapshot.ref);
-                        
-                        // 👉 បានបន្ថែម bot_type នៅទីនេះ
                         const msgData = { chat_id: activeId, name: "Admin", text: "", media_url: mUrl, media_type: "voice", sender: "admin", timestamp: serverTimestamp(), owner_uid: currentUserUid, bot_type: currentBotType };
                         await addDoc(collection(db, "admin_replies"), { chat_id: activeId, text: "", media_url: mUrl, media_type: "voice", timestamp: serverTimestamp(), owner_uid: currentUserUid, bot_type: currentBotType });
                         await addDoc(collection(db, "chats"), msgData);
-                        
                         micBtn.innerHTML = '<i class="fas fa-microphone text-xl" id="mic-icon"></i>';
                     };
-                    mediaRecorder.start();
-                    isRecording = true;
-                    micIcon.classList.replace('fa-microphone', 'fa-stop');
-                    micBtn.classList.add('recording');
+                    mediaRecorder.start(); isRecording = true;
+                    micIcon.classList.replace('fa-microphone', 'fa-stop'); micBtn.classList.add('recording');
                 } catch (err) { alert("សូមអនុញ្ញាតប្រើ Microphone!"); }
             } else {
-                mediaRecorder.stop();
-                mediaRecorder.stream.getTracks().forEach(track => track.stop());
-                isRecording = false;
-                micIcon.classList.replace('fa-stop', 'fa-microphone');
-                micBtn.classList.remove('recording');
+                mediaRecorder.stop(); mediaRecorder.stream.getTracks().forEach(track => track.stop());
+                isRecording = false; micIcon.classList.replace('fa-stop', 'fa-microphone'); micBtn.classList.remove('recording');
             }
         };
         
@@ -379,7 +342,6 @@
             const file = fileInput.files[0];
             const text = input.value.trim();
             if (!activeId || (!text && !file)) return;
-            
             try {
                 let mUrl = "", mType = "none";
                 if (file) {
@@ -390,12 +352,9 @@
                     else if (file.type.includes('video')) mType = 'video';
                     else if (file.type.includes('audio')) mType = 'voice';
                 }
-                
-                // 👉 បានបន្ថែម bot_type នៅទីនេះ
                 const msgData = { chat_id: activeId, name: "Admin", text: text, media_url: mUrl, media_type: mType, sender: "admin", timestamp: serverTimestamp(), owner_uid: currentUserUid, bot_type: currentBotType };
                 await addDoc(collection(db, "admin_replies"), { chat_id: activeId, text: text, media_url: mUrl, media_type: mType, timestamp: serverTimestamp(), owner_uid: currentUserUid, bot_type: currentBotType });
                 await addDoc(collection(db, "chats"), msgData);
-                
                 input.value = ''; fileInput.value = '';
             } catch (e) { console.error(e); }
         };
@@ -418,11 +377,9 @@
                     else if (file.type.includes('video')) mType = 'video';
                     else if (file.type.includes('audio')) mType = 'voice';
                 }
-                // 👉 បានបន្ថែម bot_type នៅទីនេះ
                 await addDoc(collection(db, "broadcasts"), { message: msg, target_category: target, media_type: mType, media_url: mUrl, delay_seconds: parseInt(delay) || 0, timestamp: serverTimestamp(), owner_uid: currentUserUid, bot_type: currentBotType });
                 alert("✅ ការផ្ញើព័ត៌មានត្រូវបានចាប់ផ្ដើម!");
-                document.getElementById('bc-msg').value = '';
-                document.getElementById('bc-file').value = '';
+                document.getElementById('bc-msg').value = ''; document.getElementById('bc-file').value = '';
             } catch (e) { alert("Error!"); }
             btn.disabled = false; btn.innerText = "ផ្ញើចេញ";
         };
